@@ -1,0 +1,19 @@
+{
+  "name": "mcp-recon-runner",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "mcp-recon": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node ./src/index.js",
+    "recon": "node ./src/index.js -p ./playbooks/web-basic-recon.md"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "whois-json": "^2.2.2",
+    "yargs": "^17.7.2"
+  }
+}
