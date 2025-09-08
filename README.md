@@ -562,39 +562,39 @@ done
 
 1. **Create executor file** (`src/executors/mytool.js`):
 
-```javascript
-import { exec } from 'child_process';
-import { promisify } from 'util';
+    ```javascript
+    import { exec } from 'child_process';
+    import { promisify } from 'util';
 
-const pexec = promisify(exec);
+    const pexec = promisify(exec);
 
-export async function myAction(target, opts = {}) {
-  const cmd = `mytool ${opts.flags || ''} ${target}`;
-  const { stdout } = await pexec(cmd, { timeout: opts.timeoutMs || 30000 });
-  return { command: cmd, raw: stdout };
-}
-```
+    export async function myAction(target, opts = {}) {
+    const cmd = `mytool ${opts.flags || ''} ${target}`;
+    const { stdout } = await pexec(cmd, { timeout: opts.timeoutMs || 30000 });
+    return { command: cmd, raw: stdout };
+    }
+    ```
 
 2. **Register in runner** (`src/runner.js`):
 
-```javascript
-import * as myToolExec from './executors/mytool.js';
+    ```javascript
+    import * as myToolExec from './executors/mytool.js';
 
-const registry = {
-  // ... existing executors
-  'mytool.action': myToolExec.myAction
-};
-```
+    const registry = {
+    // ... existing executors
+    'mytool.action': myToolExec.myAction
+    };
+    ```
 
 3. **Use in playbooks**:
 
-```yaml
-- name: Custom Tool Scan
-  uses: mytool.action
-  with:
-    flags: "--custom-option"
-    timeoutMs: 20000
-```
+    ```yaml
+    - name: Custom Tool Scan
+    uses: mytool.action
+    with:
+        flags: "--custom-option"
+        timeoutMs: 20000
+    ```
 
 ### Custom Playbook Development
 
@@ -613,7 +613,7 @@ See `playbooks/_templates.md` for comprehensive examples and patterns:
 
 **Nmap Permission Errors**:
 
-```
+```bash
 Error: You requested a scan type which requires root privileges
 ```
 
@@ -621,7 +621,7 @@ Error: You requested a scan type which requires root privileges
 
 **Timeout Errors**:
 
-```
+```bash
 Error: operation timed out after 10000ms
 ```
 
@@ -629,7 +629,7 @@ Error: operation timed out after 10000ms
 
 **DNS Resolution Failures**:
 
-```
+```bash
 Error: getaddrinfo ENOTFOUND
 ```
 
@@ -637,11 +637,19 @@ Error: getaddrinfo ENOTFOUND
 
 **HTTP Connection Errors**:
 
-```
+```bash
 Error: connect ECONNREFUSED
 ```
 
 **Solution**: Check target availability and firewall settings
+
+```bash
+# Check if the target is reachable
+ping -c 4 <target>
+
+# Test HTTP connectivity
+curl -I <target>
+```
 
 ### Debug Mode
 
@@ -658,7 +666,7 @@ Enable debug logging by checking executor output in generated reports.
 
 ## 📁 Project Structure
 
-```
+```bash
 mcp-recon-runner/
 ├── src/
 │   ├── index.js                 # CLI entrypoint
