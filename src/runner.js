@@ -12,6 +12,8 @@ import * as nmapExec from './executors/nmap.js';
 import * as httpExec from './executors/http.js';
 import * as tlsExec from './executors/tls.js';
 import * as subsExec from './executors/subdomains.js';
+import * as pingExec from './executors/ping.js';
+import * as tracerouteExec from './executors/traceroute.js';
 
 // Registry mapping playbook 'uses' strings to executor functions
 const registry = {
@@ -21,18 +23,27 @@ const registry = {
   'http.headers': httpExec.getHeaders,
   'http.get': httpExec.getPath,
   'tls.inspect': tlsExec.inspectTLS,
-  'subdomains.passive': subsExec.passive
+  'subdomains.passive': subsExec.passive,
+  'network.ping': pingExec.ping,
+  'network.traceroute': tracerouteExec.traceroute
 };
 
 // Replace templates like {{vars.target}} with values from context
 function applyTemplate(str, ctx) {
   if (typeof str !== 'string') return str;
-  return str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, k) => {
+  const result = str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, k) => {
     const parts = k.split('.');
     let v = ctx;
     for (const p of parts) v = v?.[p];
     return v ?? '';
   });
+  
+  // If the entire string was a template and resulted in a number, return as number
+  if (str.match(/^\{\{\s*[^}]+?\s*\}\}$/) && !isNaN(result) && result !== '') {
+    return Number(result);
+  }
+  
+  return result;
 }
 
 function deepTemplate(obj, ctx) {
@@ -47,7 +58,18 @@ function deepTemplate(obj, ctx) {
   return obj;
 }
 
-export async function runPlaybook({ playbookPath, outDir, varOverrides = {} }) {
+function withTimeout(promise, ms, label = 'operation') {
+  if (!ms || ms <= 0) return promise;
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); }
+    );
+  });
+}
+
+export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, stepTimeoutMs }) {
   // Load playbook and parse YAML front matter
   const raw = await fs.readFile(playbookPath, 'utf8');
   const { data: fm, content } = matter(raw, { engines: { yaml: s => yaml.load(s) } });
@@ -67,7 +89,9 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {} }) {
     }
     logStep(i + 1, stepCtx.name, stepCtx.uses);
     try {
-      const res = await fn(ctx.vars.target, stepCtx.with || {});
+      const effTimeout = stepCtx.with?.timeoutMs ?? stepTimeoutMs;
+      const execPromise = fn(ctx.vars.target, stepCtx.with || {});
+      const res = await withTimeout(execPromise, effTimeout, stepCtx.name);
       outputs.push({ name: stepCtx.name, uses: stepCtx.uses, ok: true, data: res });
     } catch (e) {
       outputs.push({ name: stepCtx.name, uses: stepCtx.uses, ok: false, error: String(e?.message || e) });

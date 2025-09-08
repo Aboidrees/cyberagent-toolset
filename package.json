@@ -2,18 +2,29 @@
   "name": "mcp-recon-runner",
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "bin": {
     "mcp-recon": "./src/index.js"
   },
   "scripts": {
     "start": "node ./src/index.js",
-    "recon": "node ./src/index.js -p ./playbooks/web-basic-recon.md"
+    "recon": "node ./src/index.js -p ./playbooks/web-basic-recon.md",
+    "recon:basic": "node ./src/index.js -p ./playbooks/web-basic-recon.md",
+    "recon:comprehensive": "node ./src/index.js -p ./playbooks/comprehensive-web-recon.md",
+    "recon:security": "node ./src/index.js -p ./playbooks/web-security-recon.md",
+    "recon:api": "node ./src/index.js -p ./playbooks/api-cloud-recon.md",
+    "recon:quick": "node ./src/index.js -p ./playbooks/quick-web-recon.md",
+    "test:nmap": "node ./src/index.js -p ./playbooks/nmap-cheat-sheet.md",
+    "test:network": "node ./src/index.js -p ./playbooks/network-connectivity-test.md",
+    "help": "node ./src/index.js --help"
   },
   "dependencies": {
     "axios": "^1.7.2",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
-    "whois-json": "^2.2.2",
+    "whois-json": "^2.1.0",
     "yargs": "^17.7.2"
   }
 }

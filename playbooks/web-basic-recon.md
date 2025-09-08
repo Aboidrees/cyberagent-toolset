@@ -34,7 +34,8 @@ steps:
     uses: subdomains.passive
     with:
       sources: ["crtsh"]
-...
-# Basic web recon against {{vars.target}}
+---
+
+## Basic web recon against {{vars.target}}
 
 This playbook performs DNS/WHOIS, top-ports scan, basic HTTP checks, TLS metadata, and passive subdomain discovery (no active brute-force).

@@ -8,6 +8,7 @@ const argv = yargs(hideBin(process.argv))
   .option('p', { alias: 'playbook', type: 'string', demandOption: true, describe: 'Path to playbook .md' })
   .option('var', { type: 'array', describe: 'Override vars, e.g. --var target=acme.com --var scheme=http' })
   .option('out', { type: 'string', default: './runs', describe: 'Output directory' })
+  .option('timeout', { type: 'number', describe: 'Per-step timeout in ms (overridden by step with.timeoutMs)' })
   .help().argv;
 
 const varOverrides = {};
@@ -21,7 +22,8 @@ await ensureDir(argv.out);
 const result = await runPlaybook({
   playbookPath: argv.playbook,
   outDir: argv.out,
-  varOverrides
+  varOverrides,
+  stepTimeoutMs: argv.timeout
 });
 
 console.log(`\n✅ Done. JSON: ${result.jsonPath}\n📝 Markdown: ${result.mdPath}`);
