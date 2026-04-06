@@ -1,49 +1,57 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
-const pexec = promisify(exec);
+import { validateTarget, validateNmapFlags } from '../utils/validate.js';
 
-// Run an nmap scan on the target using the supplied flags.
+const pexecFile = promisify(execFile);
+
+/**
+ * Run an nmap scan on the target using the supplied flags.
+ * Uses execFile (not exec) so the target and flags are never interpreted
+ * by a shell — eliminating command injection risk.
+ */
 export async function scanNmap(target, opts = {}) {
-  // Use non-privileged scan by default (-sT instead of -sS)
-  const flags = opts.flags || '-sT -Pn --top-ports 1000';
-  const cmd = `nmap ${flags} ${target}`;
-  
-  console.log(`[DEBUG] Running nmap command: ${cmd}`);
-  
+  const cleanTarget = validateTarget(target);
+
+  const rawFlags = opts.flags || '-sT -Pn --top-ports 1000';
+  const cleanFlags = validateNmapFlags(rawFlags);
+
+  // Split flags into an array for execFile (no shell interpolation)
+  const flagArgs = cleanFlags.split(/\s+/).filter(Boolean);
+  const args = [...flagArgs, cleanTarget];
+
+  const timeoutMs =
+    typeof opts.timeoutMs === 'string'
+      ? parseInt(opts.timeoutMs, 10)
+      : opts.timeoutMs;
+  const timeout = timeoutMs || 5 * 60 * 1000;
+
   try {
-    // Ensure timeout is a number
-    const timeoutMs = typeof opts.timeoutMs === 'string' ? parseInt(opts.timeoutMs, 10) : opts.timeoutMs;
-    const timeout = timeoutMs || 5 * 60 * 1000;
-    
-    const { stdout, stderr } = await pexec(cmd, {
-      timeout: timeout,
-      maxBuffer: 10 * 1024 * 1024
+    const { stdout, stderr } = await pexecFile('nmap', args, {
+      timeout,
+      maxBuffer: 10 * 1024 * 1024,
     });
-    
-    console.log(`[DEBUG] nmap completed successfully`);
-    
-    return { 
-      command: cmd, 
+
+    return {
+      command: `nmap ${args.join(' ')}`,
       raw: stdout,
       stderr: stderr || null,
-      target: target,
-      flags: flags
+      target: cleanTarget,
+      flags: cleanFlags,
     };
   } catch (e) {
     const stdout = e?.stdout || '';
     const stderr = e?.stderr || '';
-    
-    // Check for common privilege errors and provide helpful guidance
+
     if (stderr.includes('requires root privileges')) {
-      const errorMsg = `nmap error: Root privileges required for scan type.\n` +
+      throw new Error(
+        `nmap error: Root privileges required for this scan type.\n` +
         `Tip: Use '-sT' instead of '-sS' for non-privileged TCP connect scans.\n` +
-        `Command: ${cmd}\nError: ${stderr}`;
-      console.log(`[DEBUG] nmap privilege error: ${errorMsg}`);
-      throw new Error(errorMsg);
+        `Command: nmap ${args.join(' ')}\nError: ${stderr}`
+      );
     }
-    
-    const errorMsg = `nmap error. cmd="${cmd}"\nstdout: ${stdout}\nstderr: ${stderr}\nerror: ${e.message}`;
-    console.log(`[DEBUG] nmap failed: ${errorMsg}`);
-    throw new Error(errorMsg);
+
+    throw new Error(
+      `nmap error. cmd="nmap ${args.join(' ')}"\nstdout: ${stdout}\nstderr: ${stderr}\nerror: ${e.message}`
+    );
   }
 }

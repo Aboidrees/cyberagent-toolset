@@ -1,14 +1,16 @@
 {
   "name": "mcp-recon-runner",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
   },
   "bin": {
-    "mcp-recon": "./src/index.js"
+    "mcp-recon": "./src/index.js",
+    "mcp-recon-server": "./src/mcp-server.js"
   },
   "scripts": {
+    "mcp": "node ./src/mcp-server.js",
     "start": "node ./src/index.js",
     "recon": "node ./src/index.js -p ./playbooks/web-basic-recon.md",
     "recon:basic": "node ./src/index.js -p ./playbooks/web-basic-recon.md",
@@ -21,6 +23,7 @@
     "help": "node ./src/index.js --help"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.2",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
