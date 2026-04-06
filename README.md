@@ -27,6 +27,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | [Executors](docs/executors.md) | All 8 executors — options, YAML syntax, return shape |
 | [Creating Playbooks](docs/creating-playbooks.md) | Step-by-step guide to writing custom playbooks |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors, debug tips, performance tuning |
+| [Roadmap](docs/roadmap.md) | Planned executors, features, playbooks, and integrations |
 
 ---
 
