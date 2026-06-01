@@ -36,11 +36,11 @@ node src/index.js -p playbooks/web-basic-recon.md --target example.com
 
 ### Web Security Recon (`web-security-recon`)
 
-#### **32 steps · ~5–10 min**
+#### **51 steps · ~8–15 min**
 
 Vulnerability-oriented. Probes for information disclosure, exposed developer artifacts, admin interfaces, and framework-specific issues.
 
-Checks include: security headers · TLS config · `.env` · `.git` · Docker files · web.config · `.htaccess` · phpinfo · backup files · admin/management panels · PHPMyAdmin · Swagger/GraphQL · server-status · WordPress/Laravel/Django leaks · error logs · source maps · package.json · composer.json
+Checks include: security headers · TLS config · `.env` (+ `.local`/`.production`/`.backup`) · VCS exposure (`.git`/`.svn`/`.hg`/`.bzr`) · cloud creds (`.aws/credentials`/`.npmrc`/`.pypirc`) · Docker files · `docker-compose.yml` · CI configs (`.gitlab-ci.yml`/GitHub Actions) · Spring Boot Actuator (`/actuator/health`/`/actuator/env`) · IDE artifacts (`.vscode`/`.idea`/`.DS_Store`) · web.config · `.htaccess` · phpinfo · backup files · admin/management panels · PHPMyAdmin · Swagger/GraphQL · server-status · WordPress/Laravel/Django leaks · logs · source maps · package.json · composer.json · `trace.axd` · `crossdomain.xml`
 
 ```bash
 node src/index.js -p playbooks/web-security-recon.md --target example.com
@@ -80,6 +80,22 @@ Simple diagnostics: ICMP ping statistics + traceroute hop-by-hop path. Useful fo
 
 ```bash
 node src/index.js -p playbooks/network-connectivity-test.md --target example.com
+```
+
+---
+
+### All-Tools Self Test (`all-tools-selftest`)
+
+#### **9 steps · ~2–3 min**
+
+Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, tls.inspect — so you can confirm the whole engine works against a real target in one run.
+
+Steps: DNS → WHOIS → subdomains → ping → traceroute → nmap top 100 → HTTP headers → HTTP GET → TLS
+
+> **Active + authorized only.** Includes nmap, ping, and traceroute; requires `nmap` and `traceroute` installed on the host. Run only against assets you own or are authorized to scan.
+
+```bash
+node src/index.js -p playbooks/all-tools-selftest.md --target example.com
 ```
 
 ---

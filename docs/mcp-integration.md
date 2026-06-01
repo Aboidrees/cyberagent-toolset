@@ -60,7 +60,7 @@ Fully quit (`Cmd+Q` / `Alt+F4`) and reopen. Claude Desktop will start the MCP se
 
 In Claude, ask: **"List available recon topics"**
 
-Claude will call `recon_topics` and show you the 6 playbooks with descriptions.
+Claude will call `recon_topics` and show you the 7 playbooks with descriptions.
 
 ---
 
@@ -140,8 +140,8 @@ The new playbook automatically appears as a tool (`recon_play__<id>`) and in the
 ```bash
 npm run mcp
 # stderr output:
-# Loaded 6 playbooks: api-cloud-recon, web-basic-recon, ...
-# MCP Recon Runner v0.3.0 ready — 18 tools registered
+# Loaded 7 playbooks: all-tools-selftest, api-cloud-recon, web-basic-recon, ...
+# MCP Recon Runner v0.3.0 ready — 19 tools registered
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null

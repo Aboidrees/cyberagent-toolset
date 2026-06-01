@@ -17,6 +17,72 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 ---
 
+## Executor / check catalog  *(consolidated checklist)*
+
+Single source of truth for every recon check — what ships today (✅) and what's
+planned (⬜). Grouped by recon stage / `task_type`. Phase column links to the
+detailed spec below.
+
+### PASSIVE / OSINT  *(no host contact)*
+
+| Check | Executor | Status | Phase |
+| ----- | -------- | ------ | ----- |
+| DNS records (A/AAAA/CNAME/NS/MX/TXT/PTR/SOA) | `dns.resolve` | ✅ | — |
+| WHOIS registration | `whois.lookup` | ✅ | — |
+| Passive subdomains (crt.sh) | `subdomains.passive` | ✅ | — |
+| Reverse DNS / PTR sweep | `dns.reverse` | ⬜ | P1 |
+| Email security (DMARC/DKIM/SPF/MTA-STS/BIMI) | `email.security` | ⬜ | P1 |
+| ASN / IP intelligence + abuse reputation | `ip.intel` | ⬜ | P1 |
+| Shodan host data | `shodan.host` | ⬜ | P2 |
+| Passive DNS history | `securitytrails.*` | ⬜ | P4 |
+
+### LIVENESS
+
+| Check | Executor | Status | Phase |
+| ----- | -------- | ------ | ----- |
+| ICMP ping | `network.ping` | ✅ | — |
+| Traceroute | `network.traceroute` | ✅ | — |
+
+### PORTSCAN  *(active)*
+
+| Check | Executor | Status | Phase |
+| ----- | -------- | ------ | ----- |
+| TCP connect + version scan | `nmap.scan` | ✅ | — |
+| CVE lookup from service versions | `vuln.cve_lookup` | ⬜ | P2 |
+| UDP scan | `nmap.udp` | ⬜ | P2 |
+| OS fingerprint | `nmap.os` | ⬜ | P2 |
+
+### WEBSCANNER  *(active)*
+
+| Check | Executor | Status | Phase |
+| ----- | -------- | ------ | ----- |
+| HTTP headers + server banner | `http.headers` | ✅ | — |
+| HTTP GET (body/status) | `http.get` | ✅ | — |
+| TLS cert metadata | `tls.inspect` | ✅ | — |
+| Security-header A–F score | `http.security_score` | ⬜ | P1 |
+| Deep TLS (weak ciphers, proto, chain, OCSP) | `tls.deep` | ⬜ | P1 |
+| WAF / CDN fingerprint | `http.waf_detect` | ⬜ | P1 |
+| Technology stack fingerprint | `http.fingerprint` | ⬜ | P1 |
+| CORS misconfiguration | `http.cors_check` | ⬜ | P2 |
+| HTTP methods (OPTIONS/TRACE/PUT) | `http.methods` | ⬜ | P2 |
+
+### ESCALATE  *(targeted, active — today via `http.get` playbook steps)*
+
+| Check | Executor | Status | Phase |
+| ----- | -------- | ------ | ----- |
+| Exposure probes (.env/.git/admin/backup/swagger) | `http.get` steps | ✅ | — |
+| Git repo leak detector | `http.git_leak` | ⬜ | P2 |
+| Directory / path fuzzer | `http.fuzz_paths` | ⬜ | P2 |
+| Cloud storage bucket finder | `cloud.bucket_finder` | ⬜ | P2 |
+| Nuclei template scan | `nuclei.scan` | ⬜ | P4 |
+
+**Today: 9 checks live ✅ · ~18 planned ⬜.** The `task_type` enum stays at four
+(OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
+When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
+`distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.
+
+---
+
 ## Phase 1 — Deeper intelligence  *(next)*
 
 ### New executors

@@ -79,8 +79,8 @@ node src/index.js --help
 # Check the MCP server starts
 npm run mcp
 # Expected output:
-# Loaded 6 playbooks: ...
-# MCP Recon Runner v0.3.0 ready — 18 tools registered
+# Loaded 7 playbooks: ...
+# MCP Recon Runner v0.3.0 ready — 19 tools registered
 ```
 
 Press `Ctrl+C` to stop the MCP server.

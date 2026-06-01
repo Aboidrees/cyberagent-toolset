@@ -244,6 +244,146 @@ steps:
       path: "/composer.json"
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
+
+  # Additional VCS exposure (beyond .git)
+  - name: Exposed .svn/entries
+    uses: http.get
+    with:
+      path: "/.svn/entries"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: Exposed .hg (Mercurial)
+    uses: http.get
+    with:
+      path: "/.hg/store/00manifest.i"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: Exposed .bzr (Bazaar)
+    uses: http.get
+    with:
+      path: "/.bzr/branch/branch.conf"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  # Cloud / package credential leaks
+  - name: AWS Credentials
+    uses: http.get
+    with:
+      path: "/.aws/credentials"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: NPM Token (.npmrc)
+    uses: http.get
+    with:
+      path: "/.npmrc"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: PyPI Token (.pypirc)
+    uses: http.get
+    with:
+      path: "/.pypirc"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  # Environment file variants
+  - name: .env.local
+    uses: http.get
+    with:
+      path: "/.env.local"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: .env.production
+    uses: http.get
+    with:
+      path: "/.env.production"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: .env.backup
+    uses: http.get
+    with:
+      path: "/.env.backup"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  # CI / build manifests
+  - name: docker-compose.yml
+    uses: http.get
+    with:
+      path: "/docker-compose.yml"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: GitLab CI Config
+    uses: http.get
+    with:
+      path: "/.gitlab-ci.yml"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: GitHub Actions Workflow
+    uses: http.get
+    with:
+      path: "/.github/workflows/main.yml"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  # Spring Boot Actuator exposure
+  - name: Actuator Health
+    uses: http.get
+    with:
+      path: "/actuator/health"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: Actuator Env (secrets)
+    uses: http.get
+    with:
+      path: "/actuator/env"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  # IDE / editor artifacts
+  - name: VS Code settings
+    uses: http.get
+    with:
+      path: "/.vscode/settings.json"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: JetBrains .idea
+    uses: http.get
+    with:
+      path: "/.idea/workspace.xml"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: macOS .DS_Store
+    uses: http.get
+    with:
+      path: "/.DS_Store"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  # Legacy cross-domain / ASP.NET trace
+  - name: crossdomain.xml
+    uses: http.get
+    with:
+      path: "/crossdomain.xml"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+  - name: ASP.NET Trace (trace.axd)
+    uses: http.get
+    with:
+      path: "/trace.axd"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
 ---
 
 ## Web Application Security Reconnaissance for {{vars.target}}
@@ -257,8 +397,12 @@ This specialized security-focused playbook identifies potential security vulnera
 
 ### Information Disclosure Detection
 
-- Exposed configuration files (.env, web.config, .htaccess)
-- Source code exposure (.git, backup files)
+- Exposed configuration files (.env and variants, web.config, .htaccess)
+- Source code exposure across VCS (.git, .svn, .hg, .bzr) and backup files
+- Cloud/package credential leaks (.aws/credentials, .npmrc, .pypirc)
+- CI/build manifests (docker-compose.yml, .gitlab-ci.yml, GitHub Actions)
+- Spring Boot Actuator exposure (/actuator/health, /actuator/env)
+- IDE/editor artifacts (.vscode, .idea, .DS_Store)
 - Development artifacts (source maps, package files)
 
 ### Administrative Interface Discovery
