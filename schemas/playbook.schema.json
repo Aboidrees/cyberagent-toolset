@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Aboidrees/mcp-recon-runner/schemas/playbook.schema.json",
+  "title": "mcp-recon-runner playbook",
+  "description": "A reconnaissance playbook: id/title/description plus default vars and an ordered list of steps.",
+  "type": "object",
+  "required": ["id", "title", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique playbook id (used as the MCP tool name suffix).",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable label shown in reports and the MCP tool list."
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line summary shown as the MCP tool description."
+    },
+    "vars": {
+      "type": "object",
+      "description": "Default variable values; reference with {{vars.name}} and override at runtime.",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      }
+    },
+    "steps": {
+      "type": "array",
+      "description": "Ordered list of steps. Each names an executor via `uses` and passes options under `with`.",
+      "items": {
+        "type": "object",
+        "required": ["name", "uses"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human label for this step."
+          },
+          "uses": {
+            "type": "string",
+            "description": "Executor to run.",
+            "enum": [
+              "dns.resolve",
+              "dns.reverse",
+              "whois.lookup",
+              "nmap.scan",
+              "http.headers",
+              "http.get",
+              "http.security_score",
+              "http.waf_detect",
+              "http.fingerprint",
+              "http.cors_check",
+              "http.methods",
+              "http.fuzz_paths",
+              "http.git_leak",
+              "tls.inspect",
+              "tls.deep",
+              "subdomains.passive",
+              "email.security",
+              "ip.intel",
+              "vuln.cve_lookup",
+              "shodan.host",
+              "cloud.bucket_finder",
+              "network.ping",
+              "network.traceroute"
+            ]
+          },
+          "parallel": {
+            "type": "boolean",
+            "description": "Run this step concurrently with adjacent steps also flagged parallel."
+          },
+          "with": {
+            "type": "object",
+            "description": "Executor-specific options. See docs/executors.md.",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}

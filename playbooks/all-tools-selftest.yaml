@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
 # All-Tools Self Test
 # Diagnostic playbook that exercises every executor exactly once against a target — confirms the whole engine works end to end.
 # ⚠ Includes active steps (nmap, ping, traceroute, path fuzzing). Authorized targets only.

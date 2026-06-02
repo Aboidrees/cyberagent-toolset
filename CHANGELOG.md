@@ -41,6 +41,9 @@ multi-command (`run` · `diff` · `watch` · `schedule` · `report`).
 - Watchlists live in a `watchlists/` folder, with `watchlists/example.yaml` provided.
 - `.env.example` documents every supported key (Slack/webhook, AbuseIPDB, Shodan,
   NVD, SecurityTrails) with how-to-get links and free/paid status.
+- JSON Schemas for playbooks/watchlists (`schemas/`) wired via `.vscode/settings.json`
+  and per-file modelines, so editors validate against our format instead of
+  mis-detecting the files as Ansible playbooks (gives `uses:` autocomplete too).
 - Added dependencies: `node-cron`, `pdfkit`, `docx`.
 - Version bumped 0.5.0 → 0.6.0.
 

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
 # API and Cloud Service Reconnaissance
 # Reconnaissance for APIs, microservices, and cloud platforms — REST/GraphQL endpoints, auth surfaces, and CDN detection.
 # ⚠ Includes active probing. Authorized targets only.

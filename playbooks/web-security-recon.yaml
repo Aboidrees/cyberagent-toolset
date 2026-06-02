@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
 # Web Application Security Reconnaissance
 # Security-focused assessment — exposed files, admin panels, framework leaks, and information disclosure.
 # ⚠ For authorized security testing only. Ensure you have explicit permission to test the target.

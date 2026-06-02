@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
 # OWASP Top 10 Reconnaissance
 # Maps the recon phase of each OWASP Top 10 (2021) category to the executor that gathers the relevant signal.
 # ⚠ Includes active steps (path fuzzing). Authorized targets only.
