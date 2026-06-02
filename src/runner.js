@@ -4,6 +4,8 @@ import yaml from 'js-yaml';
 import path from 'path';
 import { timestampFile } from './utils/fsx.js';
 import { logStep } from './utils/logger.js';
+import { extractFindings, severityCounts, topSeverity } from './utils/findings.js';
+import { notify } from './utils/notify.js';
 
 // Import executors
 import * as dnsExec from './executors/dns.js';
@@ -95,44 +97,84 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
 
   const ctx = { vars: { ...(fm.vars || {}), ...varOverrides } };
   const steps = fm.steps || [];
-  const outputs = [];
+  const outputs = new Array(steps.length);
   const startedAt = new Date().toISOString();
   const title = fm.title || fm.id || path.basename(playbookPath);
 
-  for (const [i, step] of steps.entries()) {
+  // Execute one step and return its output object (caller controls ordering).
+  const runStep = async (step, i) => {
     const stepCtx = deepTemplate(step, { ...ctx, content, fm });
     const fn = registry[stepCtx.uses];
     if (!fn) {
-      outputs.push({ name: stepCtx.name, uses: stepCtx.uses, error: `Unknown executor` });
-      continue;
+      return { name: stepCtx.name, uses: stepCtx.uses, error: `Unknown executor` };
     }
     logStep(i + 1, stepCtx.name, stepCtx.uses);
     try {
       const effTimeout = stepCtx.with?.timeoutMs ?? stepTimeoutMs;
       const execPromise = fn(ctx.vars.target, stepCtx.with || {});
       const res = await withTimeout(execPromise, effTimeout, stepCtx.name);
-      outputs.push({ name: stepCtx.name, uses: stepCtx.uses, ok: true, data: res });
+      return { name: stepCtx.name, uses: stepCtx.uses, ok: true, data: res };
     } catch (e) {
-      outputs.push({ name: stepCtx.name, uses: stepCtx.uses, ok: false, error: String(e?.message || e) });
+      return { name: stepCtx.name, uses: stepCtx.uses, ok: false, error: String(e?.message || e) };
+    }
+  };
+
+  // Steps run sequentially by default. Consecutive steps flagged `parallel: true`
+  // form a batch that runs concurrently; a non-parallel step is a barrier.
+  // Output order always matches declaration order (indexed writes).
+  let si = 0;
+  while (si < steps.length) {
+    if (steps[si].parallel) {
+      const batch = [];
+      while (si < steps.length && steps[si].parallel) { batch.push(si); si++; }
+      await Promise.all(batch.map(idx => runStep(steps[idx], idx).then(out => { outputs[idx] = out; })));
+    } else {
+      outputs[si] = await runStep(steps[si], si);
+      si++;
     }
   }
 
   const endedAt = new Date().toISOString();
   const report = { playbook: { id: fm.id, title, path: playbookPath }, vars: ctx.vars, startedAt, endedAt, outputs };
 
+  // Aggregate severity-rated findings across all steps for the executive summary,
+  // risk matrix, and webhook notifications.
+  const findings = extractFindings(report);
+  const counts = severityCounts(findings);
+  report.findings = findings;
+  report.severityCounts = counts;
+  report.topSeverity = findings.length ? topSeverity(findings) : null;
+
   const base = timestampFile(title.replace(/\s+/g, '_'));
   const jsonPath = path.join(outDir, `${base}.json`);
   await fs.writeFile(jsonPath, JSON.stringify(report, null, 2));
 
-  // Build Markdown report
+  // Build Markdown report — executive summary + risk matrix first, then details.
   const mdParts = [
     `# ${title}`,
     `- Target: **${ctx.vars.target}**`,
     `- Started: ${startedAt}`,
     `- Ended: ${endedAt}`,
     '',
-    '## Steps & Results'
+    '## Executive Summary',
+    '',
+    findings.length
+      ? `**${findings.length}** finding(s) — top severity: **${(report.topSeverity || 'info').toUpperCase()}**.`
+      : 'No severity-rated findings.',
+    '',
+    '| Critical | High | Medium | Low | Info |',
+    '| -------- | ---- | ------ | --- | ---- |',
+    `| ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} | ${counts.info} |`,
+    '',
   ];
+  if (findings.length) {
+    mdParts.push('### Findings', '');
+    for (const f of findings.slice(0, 50)) {
+      mdParts.push(`- **[${f.severity.toUpperCase()}]** ${f.message} — \`${f.uses}\` (${f.step})`);
+    }
+    mdParts.push('');
+  }
+  mdParts.push('## Steps & Results');
   for (const o of outputs) {
     mdParts.push(`### ${o.name} \`(${o.uses})\``);
     if (o.ok) {
@@ -145,5 +187,9 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
   const mdPath = path.join(outDir, `${base}.md`);
   await fs.writeFile(mdPath, mdParts.join('\n'));
 
-  return { jsonPath, mdPath, report };
+  // Fire webhook notifications (no-op unless a webhook env var is set). Never
+  // let a notification failure break the run.
+  const notification = await notify({ report, jsonPath, mdPath }).catch(e => ({ sent: false, reason: e.message }));
+
+  return { jsonPath, mdPath, report, notification };
 }
