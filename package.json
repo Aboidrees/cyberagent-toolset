@@ -1,6 +1,6 @@
 {
   "name": "mcp-recon-runner",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
@@ -20,13 +20,20 @@
     "recon:quick": "node ./src/index.js -p ./playbooks/quick-web-recon.md",
     "test:nmap": "node ./src/index.js -p ./playbooks/nmap-cheat-sheet.md",
     "test:network": "node ./src/index.js -p ./playbooks/network-connectivity-test.md",
+    "diff": "node ./src/index.js diff",
+    "watch": "node ./src/index.js watch",
+    "schedule": "node ./src/index.js schedule",
+    "report": "node ./src/index.js report",
     "help": "node ./src/index.js --help"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.2",
+    "docx": "^9.7.1",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
+    "node-cron": "^4.2.1",
+    "pdfkit": "^0.18.0",
     "whois-json": "^2.1.0",
     "yargs": "^17.7.2"
   }
