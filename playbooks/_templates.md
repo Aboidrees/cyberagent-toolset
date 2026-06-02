@@ -7,7 +7,7 @@ vars:
   timeout: 10000
 steps:
   - name: <step name>
-    uses: dns.resolve|dns.reverse|whois.lookup|nmap.scan|http.headers|http.get|http.security_score|http.waf_detect|http.fingerprint|tls.inspect|tls.deep|subdomains.passive|email.security|ip.intel|network.ping|network.traceroute
+    uses: dns.resolve|dns.reverse|whois.lookup|nmap.scan|http.headers|http.get|http.security_score|http.waf_detect|http.fingerprint|http.cors_check|http.methods|http.fuzz_paths|http.git_leak|tls.inspect|tls.deep|subdomains.passive|email.security|ip.intel|vuln.cve_lookup|shodan.host|cloud.bucket_finder|network.ping|network.traceroute
     with: { ... executor-specific options ... }
 ---
 
@@ -41,11 +41,14 @@ tool — no code changes required.
 | **PASSIVE / OSINT** | None — queries third parties (DNS, crt.sh, Team Cymru) | `dns.resolve`, `dns.reverse`, `whois.lookup`, `subdomains.passive`, `email.security`, `ip.intel` |
 | **LIVENESS** | Light — ICMP / UDP probes to the host | `network.ping`, `network.traceroute` |
 | **PORTSCAN** | Active — connects to ports on the host | `nmap.scan` |
-| **WEBSCANNER** | Active — HTTP/TLS requests to the host | `http.headers`, `http.get`, `http.security_score`, `http.waf_detect`, `http.fingerprint`, `tls.inspect`, `tls.deep` |
+| **WEBSCANNER** | Active — HTTP/TLS requests to the host | `http.headers`, `http.get`, `http.security_score`, `http.waf_detect`, `http.fingerprint`, `http.cors_check`, `http.methods`, `tls.inspect`, `tls.deep` |
+| **VULN INTELLIGENCE** | None — queries vuln databases (NVD, Shodan) | `vuln.cve_lookup`, `shodan.host` |
+| **ESCALATION** | Active — targeted probes to the host / its cloud | `cloud.bucket_finder`, `http.fuzz_paths`, `http.git_leak` |
 
-> ⚠️ **Authorization:** LIVENESS, PORTSCAN, and WEBSCANNER stages send traffic to
-> the target. Only run them against hosts you own or are explicitly authorized to
-> test. PASSIVE / OSINT checks never touch the target and are always safe to run.
+> ⚠️ **Authorization:** LIVENESS, PORTSCAN, WEBSCANNER, and ESCALATION stages send
+> traffic to the target. Only run them against hosts you own or are explicitly
+> authorized to test. PASSIVE / OSINT and VULN INTELLIGENCE checks never touch the
+> target host and are always safe to run.
 
 ---
 
@@ -357,6 +360,48 @@ records its category, name, source, and evidence.
     deep: true
 ```
 
+### CORS Check (`http.cors_check`)
+
+Sends a request with a hostile `Origin` header and inspects the
+`Access-Control-Allow-Origin` / `Access-Control-Allow-Credentials` response. Flags
+origin reflection (any site can read responses) and the wildcard-plus-credentials
+combination.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `path` | string | `/` | URL path to request |
+| `scheme` | string | `https` | `http` or `https` |
+| `origin` | string | `https://evil.example.com` | The hostile Origin to test with |
+| `timeoutMs` | number | `10000` | Request timeout |
+
+```yaml
+- name: CORS Misconfiguration
+  uses: http.cors_check
+  with:
+    path: "/api/"
+```
+
+### HTTP Methods (`http.methods`)
+
+Reads the `OPTIONS` `Allow` header and actively probes risky methods
+(PUT/DELETE/TRACE/PATCH) concurrently to see which the server actually accepts.
+Flags TRACE (Cross-Site Tracing) and accepted write methods. (CONNECT is excluded —
+Node treats it as a tunnel request that never returns a normal response.)
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `path` | string | `/` | URL path to request |
+| `scheme` | string | `https` | `http` or `https` |
+| `requestTimeoutMs` | number | `6000` | Per-request timeout |
+| `timeoutMs` | number | step budget | Overall step budget (per-request bounded by `requestTimeoutMs`) |
+
+```yaml
+- name: HTTP Methods Audit
+  uses: http.methods
+  with:
+    path: "/"
+```
+
 ### TLS Certificate (`tls.inspect`)
 
 Inspects the TLS certificate and negotiated cipher — subject, SANs, issuer,
@@ -403,6 +448,132 @@ certificate chain validation, OCSP stapling, and HSTS/preload status. Returns a
 
 ---
 
+## Stage 5 — VULNERABILITY INTELLIGENCE
+
+These checks correlate the target with external vulnerability databases. They do
+not touch the target host — `vuln.cve_lookup` queries the NVD and `shodan.host`
+queries Shodan's pre-collected index — so they are safe to run anytime.
+
+### CVE Lookup (`vuln.cve_lookup`)
+
+Queries the National Vulnerability Database (NVD API v2) for known CVEs matching a
+product/version. Match by `cpe` (exact), `keyword` (free-text), or `product` +
+`version`. Returns CVEs with CVSS score, severity, vector, and summary, filtered by
+`minCvss` and sorted by score. Keyless; set `NVD_API_KEY` to raise the rate limit.
+
+The target argument is unused — CVEs are matched by product, not host — so this is
+typically driven by what a port/version scan (`nmap.scan -sV`) discovered.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `keyword` | string | — | Free-text search, e.g. `"Apache httpd 2.4.49"` |
+| `cpe` | string | — | Exact CPE 2.3 name (alternative to keyword) |
+| `product` | string | — | Product name (combined with `version` into a keyword) |
+| `version` | string | — | Product version |
+| `minCvss` | number | `0` | Minimum CVSS base score to include |
+| `severity` | string | — | Filter by CVSS v3 severity: `LOW`/`MEDIUM`/`HIGH`/`CRITICAL` |
+| `maxResults` | number | `20` | Maximum CVEs to return (cap 100) |
+| `apiKey` | string | `NVD_API_KEY` env | NVD API key for higher rate limits (optional) |
+
+```yaml
+- name: CVE Lookup
+  uses: vuln.cve_lookup
+  with:
+    keyword: "Apache httpd 2.4.49"
+    minCvss: 7.0
+    maxResults: 15
+```
+
+### Shodan Host (`shodan.host`)
+
+Enriches the target IP with Shodan's indexed data — open ports, services, banners,
+CVEs, and tags. **Requires** a Shodan API key (`SHODAN_API_KEY` env or `apiKey`);
+without one it returns a no-op note instead of failing the run.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `apiKey` | string | `SHODAN_API_KEY` env | Shodan API key (required to run) |
+| `timeoutMs` | number | `15000` | Request timeout |
+
+```yaml
+- name: Shodan Host Data
+  uses: shodan.host
+  with:
+    timeoutMs: 15000
+```
+
+---
+
+## Stage 6 — ESCALATION
+
+Targeted active probes that look for specific exposures. These send traffic to the
+target (or its derived cloud storage), so run them only against authorized assets.
+
+### Cloud Bucket Finder (`cloud.bucket_finder`)
+
+Derives candidate bucket names from the target domain and probes AWS S3, GCP Cloud
+Storage, and Azure Blob endpoints for public exposure. Read-only GET probes; no
+credentials, no API key. `public`/`public-listable` access is the high-severity
+finding; `private` (403) means the bucket exists but is locked down.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `extraNames` | string[] | `[]` | Additional candidate bucket names to probe |
+| `concurrency` | number | `12` | Parallel probes (cap 32) |
+| `requestTimeoutMs` | number | `6000` | Per-probe timeout |
+| `timeoutMs` | number | step budget | Overall step budget (per-probe bounded by `requestTimeoutMs`) |
+
+```yaml
+- name: Cloud Bucket Discovery
+  uses: cloud.bucket_finder
+  with:
+    timeoutMs: 8000
+```
+
+### Path Fuzzer (`http.fuzz_paths`)
+
+Active path enumeration against a built-in wordlist (`common`, `api`, `admin`,
+`php`, `asp`) or a custom list. Reports which paths exist by status code (anything
+that isn't a hard 404 / connection error). Concurrency-bounded.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `wordlist` | string \| string[] | `common` | Built-in name or a custom array of paths |
+| `scheme` | string | `https` | `http` or `https` |
+| `threads` | number | `10` | Concurrency (cap 32) |
+| `requestTimeoutMs` | number | `5000` | Per-request timeout |
+| `timeoutMs` | number | step budget | Overall step budget (per-request bounded by `requestTimeoutMs`) |
+
+```yaml
+- name: Path Discovery
+  uses: http.fuzz_paths
+  with:
+    wordlist: "common"
+    threads: 10
+    timeoutMs: 5000
+```
+
+### Git Leak Detector (`http.git_leak`)
+
+Checks for an exposed `.git/` directory. Validates that `/.git/HEAD` returns a real
+git ref (not a catch-all page), then pulls indicators (remote origin URL, last
+commit message) from `/.git/config` and `/.git/COMMIT_EDITMSG`. Flags **critical**
+when the repository is reachable.
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `scheme` | string | `https` | `http` or `https` |
+| `timeoutMs` | number | `8000` | Per-request timeout |
+
+```yaml
+- name: Git Repository Leak
+  uses: http.git_leak
+  with:
+    scheme: "https"
+```
+
+---
+
 ## Available Playbooks
 
 Production playbooks (each auto-registers as an MCP tool):
@@ -418,6 +589,9 @@ Production playbooks (each auto-registers as an MCP tool):
 | `email-security-assessment.md` | SPF · DMARC · DKIM · MTA-STS · BIMI |
 | `tls-deep-assessment.md` | Protocols · weak ciphers · chain · OCSP · HSTS |
 | `web-headers-assessment.md` | A–F security header grade · WAF/CDN · tech stack |
+| `vulnerability-assessment.md` | CVE lookup · Shodan · bucket finder · git leak |
+| `owasp-top10-recon.md` | Recon mapped to each OWASP Top 10 category |
+| `cloud-security-assessment.md` | Cloud hosting · storage exposure · edge config |
 
 `all-tools-selftest.md` is a diagnostic playbook that exercises **every executor
 exactly once** — useful for confirming the whole engine works end-to-end.
