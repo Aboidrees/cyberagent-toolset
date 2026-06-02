@@ -179,7 +179,7 @@ Identifies the technology stack from HTTP headers and body patterns — framewor
     deep: true
 ```
 
-### New playbooks
+### New playbooks for phase 1
 
 | Playbook | Steps | Focus |
 | ---------- | ------- | ------- |
@@ -274,7 +274,7 @@ Checks for exposed `.git` directory and reconstructs leaked content indicators:
 - Risk matrix table (Critical / High / Medium / Low / Info)
 - Remediation suggestions per finding type
 
-### New playbooks
+### New playbooks for phase 2
 
 | Playbook | Steps | Focus |
 | ---------- | ------- | ------- |
