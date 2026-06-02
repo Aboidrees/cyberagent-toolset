@@ -368,7 +368,7 @@ NOTIFY_ON_SEVERITY=high,critical
 Package and share executors as npm plugins. Install a community executor with one command:
 
 ```bash
-npm install mcp-recon-executor-nikto
+npm install cyberagent-executor-nikto
 ```
 
 It auto-registers in `runner.js` and appears in the MCP tool list.

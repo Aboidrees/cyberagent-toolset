@@ -4,6 +4,42 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.7.0] - 2026-06-02
+
+**Renamed to CyberAgentToolSet (CATS)** and re-architected around installable
+**extensions**. Capabilities are now domain modules classified by attack-lifecycle
+phase; the core is an engine + catalog that discovers them (locally and from npm
+plugins). No new executors — the 23 are re-homed, and the 23-executor self-test
+stays green.
+
+### Changed
+
+- **Project renamed** `mcp-recon-runner` → `cyberagent-toolset`. Bins are now
+  `cyberagent` (CLI) and `cyberagent-mcp` (server); the MCP tool prefix is `cats_`.
+- **Extension architecture.** Executors moved from `src/executors/*.js` into
+  domain extensions under `extensions/<domain>/` (dns, whois, email, ip-intel,
+  threat-intel, network, web, tls, cloud). Each extension ships a descriptor
+  (manifest) declaring its executors with `phase` / `posture` / `targetTypes` /
+  `permissions`, and owns its findings extraction (`report.js`).
+- **Catalog-driven core.** `src/extensions/loader.js` discovers extensions and
+  builds the registry; `runner.js` and `mcp-server.js` no longer hardcode
+  executors. The MCP server generates one `cats_<uses>` tool per executor plus a
+  new `cats_capabilities` tool that lists everything by phase/posture/domain.
+- **`uses:` keys unchanged** — playbooks and the 23-executor self-test are
+  untouched by the move.
+- `utils/findings.js` is now a thin aggregator; per-executor severity logic lives
+  in each extension's `report.js`.
+- `docs/architecture.md` documents the model; version bumped 0.6.0 → 0.7.0.
+
+### Added
+
+- **Installable extensions, day one.** Local `extensions/` load out of the box;
+  npm packages named `cyberagent-ext-*` / `@cyberagent/ext-*` auto-register via the
+  same descriptor contract. Shared services (`validateTarget`, …) are exposed as
+  `#sdk` for local extensions and injected as `ctx` into every `run()` for plugins.
+- Attack-lifecycle taxonomy: phases `reconnaissance` · `scanning` · `gaining-access`
+  (with `maintaining-access` / `covering-tracks` as out-of-scope vocabulary only).
+
 ## [0.6.0] - 2026-06-02
 
 Phase 3 — Scale and automation. Parallel execution, scheduling, diffing, batch

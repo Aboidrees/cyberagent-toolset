@@ -20,7 +20,7 @@ A playbook is pure YAML with three required keys (`id`, `title`, `description`)
 plus optional `vars` and a list of `steps`:
 
 ```yaml
-id: my-recon                 # required · used as MCP tool name: recon_play__my_recon
+id: my-recon                 # required · used as MCP tool name: cats_play__my_recon
 title: My Recon Playbook     # required · shown in reports and MCP tool list
 description: One-line summary shown in the MCP tool listing and reports.
 vars:
@@ -58,7 +58,7 @@ whose name starts with `_` (like `_template.yaml`) are skipped by the loader.
 node src/index.js -p playbooks/my-recon.yaml --target example.com
 ```
 
-For MCP, restart Claude Desktop and the playbook will appear in `recon_topics`.
+For MCP, restart Claude Desktop and the playbook will appear in `cats_topics`.
 
 ---
 

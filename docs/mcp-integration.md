@@ -1,6 +1,6 @@
 # MCP Integration
 
-MCP Recon Runner implements the [Model Context Protocol](https://modelcontextprotocol.io) so Claude (or any MCP client) can call recon tools directly from a conversation.
+CyberAgentToolSet (CATS) implements the [Model Context Protocol](https://modelcontextprotocol.io) so Claude (or any MCP client) can call recon tools directly from a conversation.
 
 ---
 
@@ -30,7 +30,7 @@ You ──► Claude Desktop
 ```bash
 # macOS / Linux
 realpath src/mcp-server.js
-# e.g.  /Users/yourname/development/mcp-recon-runner/src/mcp-server.js
+# e.g.  /Users/yourname/development/cyberagent-toolset/src/mcp-server.js
 ```
 
 ### 2. Add the server to Claude Desktop config
@@ -43,7 +43,7 @@ Open (or create) `~/.claude/claude_desktop_config.json`:
     "recon": {
       "command": "node",
       "args": [
-        "/Users/yourname/development/mcp-recon-runner/src/mcp-server.js"
+        "/Users/yourname/development/cyberagent-toolset/src/mcp-server.js"
       ]
     }
   }
@@ -60,7 +60,7 @@ Fully quit (`Cmd+Q` / `Alt+F4`) and reopen. Claude Desktop will start the MCP se
 
 In Claude, ask: **"List available recon topics"**
 
-Claude will call `recon_topics` and show you the 7 playbooks with descriptions.
+Claude will call `cats_topics` and show you the 7 playbooks with descriptions.
 
 ---
 
@@ -71,7 +71,7 @@ Once connected, the typical flow looks like this:
 ```TEXT
 You:    "Run recon on fortmind.qa"
 
-Claude: calls recon_topics → gets list of playbooks
+Claude: calls cats_topics → gets list of playbooks
 
 Claude: "Which topics do you want to run?
          ☐ Quick Web Recon (8 steps — DNS, headers, TLS, subdomains)
@@ -83,7 +83,7 @@ Claude: "Which topics do you want to run?
 
 You:    "Quick Web Recon and Web Security Recon"
 
-Claude: calls recon_run_multi {
+Claude: calls cats_run_multi {
           target: "fortmind.qa",
           playbooks: ["quick-web-recon", "web-security-recon"]
         }
@@ -99,29 +99,37 @@ Claude: presents findings, highlights issues
 
 | Tool | Description |
 | ------ | ------------- |
-| `recon_topics` | List all playbooks with full metadata (id, title, steps, executors) |
+| `cats_capabilities` | List every executor grouped by phase / posture / domain |
+| `cats_topics` | List all playbooks with full metadata (id, title, steps, executors) |
 
 ### Playbook runners
 
 | Tool | Description |
 | ------ | ------------- |
-| `recon_run` | Run a single playbook: `{ target, playbook, vars? }` |
-| `recon_run_multi` | Run multiple playbooks in one call: `{ target, playbooks: [] }` |
-| `recon_play__<id>` | Direct shortcut per playbook, e.g. `recon_play__quick_web_recon` |
+| `cats_run` | Run a single playbook: `{ target, playbook, vars? }` |
+| `cats_run_multi` | Run multiple playbooks in one call: `{ target, playbooks: [] }` |
+| `cats_play__<id>` | Direct shortcut per playbook, e.g. `cats_play__quick_web_recon` |
 
 ### Low-level executor tools
 
-| Tool | What it calls |
-| ------ | -------------- |
-| `recon_dns` | DNS resolution (any record types) |
-| `recon_whois` | WHOIS lookup |
-| `recon_nmap` | nmap port scan |
-| `recon_http_headers` | HTTP response headers |
-| `recon_http_get` | HTTP GET with body snippet |
-| `recon_tls` | TLS certificate + cipher inspection |
-| `recon_subdomains` | Passive subdomain enumeration (crt.sh) |
-| `recon_ping` | ICMP ping with statistics |
-| `recon_traceroute` | Traceroute with hop-by-hop detail |
+Every executor is exposed as `cats_<uses>` (the `uses` key with dots → underscores),
+generated from the extension catalog. Examples:
+
+| Tool | `uses` key | Phase · Domain |
+| ---- | ---------- | -------------- |
+| `cats_dns_resolve` | `dns.resolve` | reconnaissance · dns |
+| `cats_whois_lookup` | `whois.lookup` | reconnaissance · whois |
+| `cats_email_security` | `email.security` | reconnaissance · email |
+| `cats_ip_intel` | `ip.intel` | reconnaissance · ip-intel |
+| `cats_nmap_scan` | `nmap.scan` | scanning · network |
+| `cats_http_security_score` | `http.security_score` | scanning · web |
+| `cats_tls_deep` | `tls.deep` | scanning · tls |
+| `cats_vuln_cve_lookup` | `vuln.cve_lookup` | reconnaissance · threat-intel |
+| `cats_cloud_bucket_finder` | `cloud.bucket_finder` | gaining-access · cloud |
+| … | … | … |
+
+Call **`cats_capabilities`** for the full, live list (it reflects any installed
+extensions, including npm `cyberagent-ext-*` plugins).
 
 ---
 
@@ -131,7 +139,7 @@ Claude: presents findings, highlights issues
 2. Make sure it has an `id`, `title`, and `description`.
 3. Restart Claude Desktop.
 
-The new playbook automatically appears as a tool (`recon_play__<id>`) and in the `recon_topics` list — no code changes needed.
+The new playbook automatically appears as a tool (`cats_play__<id>`) and in the `cats_topics` list — no code changes needed.
 
 ---
 
@@ -140,8 +148,8 @@ The new playbook automatically appears as a tool (`recon_play__<id>`) and in the
 ```bash
 npm run mcp
 # stderr output:
-# Loaded 7 playbooks: all-tools-selftest, api-cloud-recon, web-basic-recon, ...
-# MCP Recon Runner v0.3.0 ready — 19 tools registered
+# Loaded 9 extensions (23 executors), 13 playbooks
+# CyberAgentToolSet (CATS) v0.7.0 ready — 40 tools
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null
