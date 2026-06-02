@@ -4,6 +4,33 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.8.0] - 2026-06-02
+
+Phase 4 — tool expansion. **23 → 40 executors** across **13 extensions**, plus the
+Nuclei multiplier (thousands of templated checks). MCP now exposes 57 tools.
+
+### Added
+
+- **Keyless executor batch (+12):**
+  - DNS: `dns.dnssec` (DoH), `dns.caa`, `subdomains.bruteforce`.
+  - Web: `http.cookies`, `http.robots`, `http.secrets`, `http.open_redirect`,
+    `http.subdomain_takeover`, `web.wayback` (passive archive URLs).
+  - Network: `nmap.udp`, `nmap.os` (no-op note without root), `network.banner`.
+- **`nuclei.scan`** — wraps the nuclei binary (CVEs, exposures, misconfigs,
+  takeovers); no-op note when the binary is absent.
+- **Key-gated intel extensions** (no-op without their key, like Shodan):
+  `securitytrails.subdomains`, `securitytrails.dns_history`, `censys.host`,
+  `github.leaks`.
+- `.env.example` documents the new keys (SecurityTrails, Censys, GitHub token).
+
+### Changed
+
+- `all-tools-selftest` now exercises all 40 executors (passes 40/40).
+- Multi-request executors (`network.banner`) decouple per-request timeout from the
+  step budget; `nmap.udp`/`nmap.os` no-op gracefully when root is required.
+- Docs: executors.md gains the expanded toolset; roadmap marks nmap UDP/OS,
+  SecurityTrails, and Nuclei complete; version bumped 0.7.0 → 0.8.0.
+
 ## [0.7.0] - 2026-06-02
 
 **Renamed to CyberAgentToolSet (CATS)** and re-architected around installable

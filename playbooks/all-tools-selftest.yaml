@@ -115,3 +115,81 @@ steps:
       path: /
       scheme: "{{vars.scheme}}"
       timeoutMs: 15000
+  - name: DNSSEC posture
+    uses: dns.dnssec
+    with:
+      timeoutMs: 8000
+  - name: CAA records
+    uses: dns.caa
+    with:
+      timeoutMs: 8000
+  - name: Subdomain brute-force
+    uses: subdomains.bruteforce
+    with:
+      timeoutMs: 20000
+  - name: Wayback URLs
+    uses: web.wayback
+    with:
+      limit: 20
+      timeoutMs: 20000
+  - name: Cookie security
+    uses: http.cookies
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
+  - name: robots.txt / sitemap
+    uses: http.robots
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
+  - name: Response secrets
+    uses: http.secrets
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
+  - name: Open redirect
+    uses: http.open_redirect
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
+  - name: Subdomain takeover
+    uses: http.subdomain_takeover
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
+  - name: TCP banner grab
+    uses: network.banner
+    with:
+      timeoutMs: 30000
+  - name: nmap UDP (top 20)
+    uses: nmap.udp
+    with:
+      flags: "-sU -Pn --top-ports 20"
+      timeoutMs: 120000
+  - name: nmap OS fingerprint
+    uses: nmap.os
+    with:
+      timeoutMs: 60000
+  - name: Nuclei scan
+    uses: nuclei.scan
+    with:
+      timeoutMs: 60000
+  - name: SecurityTrails subdomains
+    uses: securitytrails.subdomains
+    with:
+      timeoutMs: 15000
+  - name: SecurityTrails DNS history
+    uses: securitytrails.dns_history
+    with:
+      timeoutMs: 15000
+  - name: Censys host
+    uses: censys.host
+    with:
+      timeoutMs: 15000
+  - name: GitHub leaks
+    uses: github.leaks
+    with:
+      timeoutMs: 15000

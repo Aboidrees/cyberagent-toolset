@@ -24,7 +24,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
 | [MCP Integration](docs/mcp-integration.md) | MCP server setup, Claude Desktop config, interactive flow |
 | [Playbooks](docs/playbooks.md) | Available playbooks, format reference, variable templating |
-| [Executors](docs/executors.md) | All 23 executors — options, YAML syntax, return shape |
+| [Executors](docs/executors.md) | All 40 executors — options, YAML syntax, return shape |
 | [Architecture](docs/architecture.md) | Extension model, catalog, taxonomy, plugin contract |
 | [Creating Playbooks](docs/creating-playbooks.md) | Step-by-step guide to writing custom playbooks |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors, debug tips, performance tuning |
@@ -106,8 +106,8 @@ cyberagent-toolset/
 │   │   └── loader.js         # Discover extensions → build the catalog
 │   └── utils/                # findings · fsx · notify · logger · os · playbooks · validate
 ├── extensions/               # Domain modules (each = one installable extension)
-│   ├── dns/  whois/  email/  ip-intel/  threat-intel/     # reconnaissance
-│   ├── network/  web/  tls/                               # scanning (+ web access)
+│   ├── dns/ whois/ email/ ip-intel/ threat-intel/ securitytrails/ censys/ github-leaks/   # recon
+│   ├── network/ web/ tls/ nuclei/                       # scanning
 │   ├── cloud/                                             # gaining-access
 │   └── <domain>/
 │       ├── index.js          # Extension Descriptor (manifest: executors + metadata)

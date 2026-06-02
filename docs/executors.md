@@ -670,3 +670,51 @@ HTTP methods audit — reads the `OPTIONS` `Allow` header and actively probes ri
 ```
 
 **Returns:** `{ url, advertised, riskyAccepted: [{ method, status }], findings }`.
+
+---
+
+# Expanded toolset (v0.8.0)
+
+The following executors were added in the Phase 4 expansion. Keyless unless noted.
+
+## DNS
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `dns.dnssec` | recon · passive | `timeoutMs` | `{ enabled, hasDnskey, hasDs, authenticated, findings }` — DNSSEC posture via DNS-over-HTTPS |
+| `dns.caa` | recon · passive | `timeoutMs` | `{ records, issuers, findings }` — CAA issuance policy |
+| `subdomains.bruteforce` | recon · active | `wordlist[]`, `concurrency`, `lookupTimeoutMs` | `{ wordsTried, found, subdomains[] }` — active subdomain brute-force |
+
+## Web
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `http.cookies` | scanning · active | `path`, `scheme` | Cookie `Secure`/`HttpOnly`/`SameSite` audit + findings |
+| `http.robots` | recon · active | `scheme` | robots.txt `Disallow` + sitemap URLs |
+| `http.secrets` | gaining-access · active | `path`, `scheme` | Regex scan of the body for exposed keys/tokens/private keys + findings |
+| `http.open_redirect` | scanning · active | `path`, `scheme`, `params[]` | Open-redirect probe across common params + findings |
+| `http.subdomain_takeover` | scanning · active | `scheme` | Dangling-CNAME takeover detection (GitHub/S3/Heroku/Azure/Fastly/…) |
+| `web.wayback` | recon · passive | `limit` | Archived URLs from the Wayback Machine (queries archive.org, not the target) |
+
+## Network
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `nmap.udp` | scanning · active | `flags`, `timeoutMs` | UDP scan (`-sU`). No-op note without root |
+| `nmap.os` | scanning · active | `timeoutMs` | OS fingerprint (`-O`). No-op note without root |
+| `network.banner` | scanning · active | `ports[]`, `requestTimeoutMs` | TCP service banner grab (SSH/FTP/SMTP/Redis/…) |
+
+## Vulnerability — Nuclei (the multiplier)
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `nuclei.scan` | scanning · active | `scheme`, `severity`, `tags`, `templates[]` | Runs the `nuclei` binary (thousands of templates) → severity-rated findings. No-op note if the binary is absent. Install: github.com/projectdiscovery/nuclei |
+
+## Threat intel — key-gated (no-op without keys)
+
+| `uses` | Key | Returns |
+| ------ | --- | ------- |
+| `securitytrails.subdomains` | `SECURITYTRAILS_API_KEY` | Historical subdomains |
+| `securitytrails.dns_history` | `SECURITYTRAILS_API_KEY` | Historical A-record timeline |
+| `censys.host` | `CENSYS_API_ID` + `CENSYS_API_SECRET` | Host services/software/ASN/location |
+| `github.leaks` | `GITHUB_TOKEN` | Public GitHub code referencing the domain + findings |
