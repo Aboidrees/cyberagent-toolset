@@ -18,10 +18,17 @@ TMP="$(mktemp -d)"
 
 echo "Cloning wiki: $WIKI_URL"
 if ! git clone "$WIKI_URL" "$TMP" 2>/dev/null; then
-  echo "ERROR: could not clone the wiki repo."
-  echo "  - Is the wiki enabled? (repo Settings → Features → Wikis)"
-  echo "  - On a free plan the repo must be PUBLIC for wikis."
-  echo "  - Create one page in the web UI first so the wiki repo is initialized."
+  echo "ERROR: the wiki git repo does not exist yet."
+  echo
+  echo "GitHub creates it only after the FIRST page is saved in the web UI"
+  echo "(there is no API to do this). One-time step:"
+  echo
+  echo "  1. Open  https://github.com/${REPO}/wiki"
+  echo "  2. Click 'Create the first page', type anything, 'Save Page'."
+  echo "  3. Re-run ./wiki/publish.sh  — it overwrites that page with all pages."
+  echo
+  echo "(Wiki feature must be enabled and, on a free plan, the repo public —"
+  echo " both already done for this repo.)"
   exit 1
 fi
 
