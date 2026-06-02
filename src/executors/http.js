@@ -302,3 +302,275 @@ export async function fingerprint(target, opts = {}) {
     technologies: tech,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// http.fuzz_paths — active path enumeration with built-in wordlists
+// ─────────────────────────────────────────────────────────────────────────────
+
+const WORDLISTS = {
+  common: [
+    '/robots.txt', '/sitemap.xml', '/.well-known/security.txt', '/favicon.ico',
+    '/admin/', '/login', '/dashboard', '/config', '/backup', '/backup.zip',
+    '/.env', '/.git/config', '/test', '/dev', '/old', '/tmp', '/uploads/',
+    '/api', '/status', '/health', '/server-status', '/phpinfo.php', '/info.php',
+  ],
+  api: [
+    '/api', '/api/v1', '/api/v2', '/api/docs', '/api/swagger', '/swagger.json',
+    '/openapi.json', '/graphql', '/graphiql', '/api/health', '/api/status',
+    '/api/users', '/api/admin', '/v1', '/v2', '/.well-known/openid-configuration',
+  ],
+  admin: [
+    '/admin/', '/admin/login', '/administrator/', '/wp-admin/', '/manage/',
+    '/management/', '/cpanel/', '/phpmyadmin/', '/adminer.php', '/console/',
+    '/dashboard/', '/portal/', '/staff/', '/backend/',
+  ],
+  php: [
+    '/index.php', '/info.php', '/phpinfo.php', '/config.php', '/config.inc.php',
+    '/wp-config.php.bak', '/db.php', '/install.php', '/setup.php', '/test.php',
+    '/shell.php', '/upload.php', '/adminer.php',
+  ],
+  asp: [
+    '/default.aspx', '/web.config', '/trace.axd', '/elmah.axd', '/admin.aspx',
+    '/login.aspx', '/api.asmx', '/service.svc', '/global.asax',
+  ],
+};
+
+/**
+ * Active path enumeration. Probes a built-in (or custom) wordlist against the
+ * target and reports which paths exist by status code. Concurrency-bounded.
+ *
+ * Active — only run against authorized targets.
+ */
+export async function fuzzPaths(target, opts = {}) {
+  const cleanTarget = validateTarget(target);
+  const scheme = opts.scheme || 'https';
+  // Per-request timeout is separate from any step-level budget the runner applies
+  // via `timeoutMs` — this executor fires many requests, so a single shared value
+  // would make the whole step exceed its own per-request cap.
+  const reqTimeoutMs = opts.requestTimeoutMs || 5000;
+  const concurrency = Math.min(opts.threads || 10, 32);
+
+  const list = Array.isArray(opts.wordlist)
+    ? opts.wordlist
+    : WORDLISTS[opts.wordlist || 'common'] || WORDLISTS.common;
+
+  const hits = [];
+  async function probe(path) {
+    const url = buildUrl(scheme, cleanTarget, path);
+    try {
+      const res = await axios.get(url, {
+        timeout: reqTimeoutMs,
+        validateStatus: () => true,
+        maxRedirects: 0,
+        maxContentLength: 2_000_000,
+        maxBodyLength: 2_000_000,
+      });
+      // Treat anything that isn't a hard 404 / connection error as "present".
+      if (res.status !== 404) {
+        const len = res.headers?.['content-length'] ||
+          (typeof res.data === 'string' ? res.data.length : null);
+        hits.push({ path, status: res.status, contentLength: len ? Number(len) : null });
+      }
+    } catch {
+      // connection refused / timeout → treat as not present
+    }
+  }
+
+  for (let i = 0; i < list.length; i += concurrency) {
+    await Promise.all(list.slice(i, i + concurrency).map(probe));
+  }
+
+  hits.sort((a, b) => a.status - b.status || a.path.localeCompare(b.path));
+  return {
+    target: cleanTarget,
+    wordlist: Array.isArray(opts.wordlist) ? 'custom' : (opts.wordlist || 'common'),
+    pathsTried: list.length,
+    found: hits.length,
+    hits,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// http.git_leak — exposed .git directory detector
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Git repository leak detector. Checks for an exposed `.git/` directory and
+ * pulls indicators (remote origin URL, last commit message) when accessible.
+ * Flags as critical when repository internals are reachable.
+ */
+export async function gitLeak(target, opts = {}) {
+  const cleanTarget = validateTarget(target);
+  const scheme = opts.scheme || 'https';
+  const timeoutMs = opts.timeoutMs || 8000;
+
+  async function get(path) {
+    try {
+      const res = await axios.get(buildUrl(scheme, cleanTarget, path), {
+        timeout: timeoutMs,
+        validateStatus: () => true,
+        maxRedirects: 0,
+        maxContentLength: 2_000_000,
+        maxBodyLength: 2_000_000,
+      });
+      return { status: res.status, body: typeof res.data === 'string' ? res.data : '' };
+    } catch (e) {
+      return { status: 0, body: '', error: e.message };
+    }
+  }
+
+  const head = await get('/.git/HEAD');
+  // A real .git/HEAD looks like "ref: refs/heads/main" — a 200 with HTML is just
+  // a catch-all page, not an exposed repo.
+  const headLooksReal = head.status === 200 && /^ref:\s|^[0-9a-f]{40}/m.test(head.body);
+
+  const result = {
+    target: cleanTarget,
+    exposed: headLooksReal,
+    checks: { '/.git/HEAD': head.status },
+  };
+
+  if (!headLooksReal) {
+    result.severity = 'none';
+    result.note = head.status === 200
+      ? '/.git/HEAD returned 200 but content is not a real git ref (likely a catch-all page).'
+      : 'No exposed .git directory detected.';
+    return result;
+  }
+
+  // Repo is exposed — pull the high-value indicator files.
+  const [config, commitMsg] = await Promise.all([
+    get('/.git/config'),
+    get('/.git/COMMIT_EDITMSG'),
+  ]);
+  result.checks['/.git/config'] = config.status;
+  result.checks['/.git/COMMIT_EDITMSG'] = commitMsg.status;
+
+  const indicators = {};
+  if (config.status === 200 && config.body) {
+    indicators.head = head.body.trim().slice(0, 200);
+    const remote = config.body.match(/url\s*=\s*(.+)/);
+    if (remote) indicators.remoteOrigin = remote[1].trim();
+  }
+  if (commitMsg.status === 200 && commitMsg.body) {
+    indicators.lastCommitMessage = commitMsg.body.trim().slice(0, 200);
+  }
+
+  result.severity = 'critical';
+  result.indicators = indicators;
+  result.note = 'Exposed .git directory — source code and history may be reconstructable.';
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// http.cors_check — CORS misconfiguration probe
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Probe for CORS misconfigurations. Sends a request with a hostile Origin and
+ * inspects the Access-Control-Allow-Origin / -Credentials response headers.
+ * Flags origin reflection and the dangerous wildcard-plus-credentials combo.
+ */
+export async function corsCheck(target, opts = {}) {
+  const cleanTarget = validateTarget(target);
+  const url = buildUrl(opts.scheme || 'https', cleanTarget, opts.path || '/');
+  const evilOrigin = opts.origin || 'https://evil.example.com';
+
+  const res = await axios.get(url, {
+    timeout: opts.timeoutMs || 10000,
+    validateStatus: () => true,
+    maxRedirects: 2,
+    maxContentLength: 2_000_000,
+    maxBodyLength: 2_000_000,
+    headers: { Origin: evilOrigin },
+  });
+
+  const headers = res.headers || {};
+  const acao = headers['access-control-allow-origin'] || null;
+  const acac = headers['access-control-allow-credentials'] || null;
+  const findings = [];
+
+  if (acao === evilOrigin) {
+    findings.push({
+      severity: acac === 'true' ? 'high' : 'medium',
+      message: acac === 'true'
+        ? 'Origin is reflected AND credentials are allowed — any site can read authenticated responses.'
+        : 'Arbitrary Origin is reflected in Access-Control-Allow-Origin.',
+    });
+  } else if (acao === '*' && acac === 'true') {
+    findings.push({ severity: 'high', message: 'Wildcard origin with credentials allowed (browsers block this, but it signals misconfig).' });
+  } else if (acao === 'null') {
+    findings.push({ severity: 'medium', message: 'Access-Control-Allow-Origin: null — exploitable from sandboxed iframes.' });
+  }
+
+  return {
+    url,
+    status: res.status,
+    testedOrigin: evilOrigin,
+    allowOrigin: acao,
+    allowCredentials: acac,
+    reflectsOrigin: acao === evilOrigin,
+    misconfigured: findings.length > 0,
+    findings,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// http.methods — allowed HTTP methods + risky-method probe
+// ─────────────────────────────────────────────────────────────────────────────
+
+// CONNECT is intentionally excluded: Node's HTTP client treats it as a tunnel
+// request (emits a 'connect' event, never a 'response'), so axios's timeout
+// never fires and the probe hangs. It isn't meaningful for auditing a normal
+// web server anyway.
+const RISKY_METHODS = ['PUT', 'DELETE', 'TRACE', 'PATCH'];
+
+/**
+ * Enumerate allowed HTTP methods via OPTIONS (Allow header) and actively probe
+ * for risky methods (PUT/DELETE/TRACE/etc.) that the server actually accepts.
+ */
+export async function methods(target, opts = {}) {
+  const cleanTarget = validateTarget(target);
+  const scheme = opts.scheme || 'https';
+  const url = buildUrl(scheme, cleanTarget, opts.path || '/');
+  // Per-request timeout, independent of the runner's step-level budget — this
+  // executor fires OPTIONS plus one probe per risky method.
+  const reqTimeoutMs = opts.requestTimeoutMs || 6000;
+
+  const out = { url, advertised: [], riskyAccepted: [], findings: [] };
+
+  const request = (method) => axios.request({
+    url, method,
+    timeout: reqTimeoutMs, validateStatus: () => true, maxRedirects: 0,
+    maxContentLength: 1_000_000, maxBodyLength: 1_000_000,
+  });
+
+  // Fire OPTIONS and every risky-method probe concurrently so the whole audit
+  // costs ~one round trip rather than one per method.
+  const [optionsRes, ...riskyRes] = await Promise.all([
+    request('OPTIONS').then(r => r, e => ({ error: e })),
+    ...RISKY_METHODS.map(m => request(m).then(r => ({ method: m, status: r.status }), () => null)),
+  ]);
+
+  if (optionsRes.error) {
+    out.optionsError = optionsRes.error.message;
+  } else {
+    out.optionsStatus = optionsRes.status;
+    const allow = optionsRes.headers?.['allow'];
+    if (allow) out.advertised = allow.split(',').map(m => m.trim().toUpperCase()).filter(Boolean);
+  }
+
+  // A non-405/501/404/400 response means the method is actually handled.
+  out.riskyAccepted = riskyRes.filter(r => r && ![405, 501, 404, 400].includes(r.status));
+
+  if (out.advertised.includes('TRACE') || out.riskyAccepted.some(r => r.method === 'TRACE')) {
+    out.findings.push({ severity: 'medium', message: 'TRACE is enabled — can enable Cross-Site Tracing (XST).' });
+  }
+  for (const r of out.riskyAccepted) {
+    if (r.method === 'PUT' || r.method === 'DELETE') {
+      out.findings.push({ severity: 'high', message: `${r.method} appears accepted (HTTP ${r.status}) — verify it cannot modify content.` });
+    }
+  }
+
+  return out;
+}
