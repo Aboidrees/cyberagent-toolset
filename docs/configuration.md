@@ -75,20 +75,70 @@ The `runs/` directory is gitignored — reports are never committed to source co
 
 ## Environment variables
 
-Create a `.env` file in the project root (it is gitignored):
+Create a `.env` file in the project root (it is gitignored). Everything is
+optional — the tool runs fully keyless. See `.env.example` for the full list.
 
 ```bash
 # .env
-# Reserved for future API integrations
 
-# SecurityTrails API key (when SecurityTrails executor is added)
-# SECURITYTRAILS_API_KEY=your_key_here
+# ── Webhook / notifications ──
+# A run summary is POSTed when findings meet the severity threshold.
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+WEBHOOK_URL=https://example.com/recon-webhook
+NOTIFY_ON_SEVERITY=high,critical        # comma list, or "all"
 
-# Shodan API key (when Shodan executor is added)
-# SHODAN_API_KEY=your_key_here
+# ── Optional API keys for key-gated executors ──
+ABUSEIPDB_API_KEY=your_key_here          # ip.intel abuse reputation (optional)
+SHODAN_API_KEY=your_key_here             # shodan.host (no-op without it)
+NVD_API_KEY=your_key_here                # vuln.cve_lookup rate-limit boost (optional)
 ```
 
-The project does not currently require any API keys — all built-in executors use public APIs or local tools.
+All built-in executors work without keys; the keys above only enable extra
+enrichment or integrations.
+
+---
+
+## CLI commands
+
+Beyond the default `run` command, the CLI exposes scale-and-automation commands:
+
+```bash
+# Run a playbook (default command — the bare form still works)
+node src/index.js -p playbooks/quick-web-recon.md --target cyberany.org
+
+# Diff two runs — exits non-zero when something changed (handy for monitoring)
+node src/index.js diff runs/old.json runs/new.json [--out diff.md]
+
+# Run a batch of targets + playbooks from a YAML watchlist
+node src/index.js watch --list watchlist.yml [--out ./runs]
+
+# Run a playbook on a cron schedule (long-running; new findings fire webhooks)
+node src/index.js schedule --playbook quick-web-recon --target cyberany.org \
+  --cron "0 8 * * 1" [--now]
+
+# Export a run to a professional report
+node src/index.js report runs/run.json --format pdf --out report.pdf [--company "Acme"]
+```
+
+`npm run diff|watch|schedule|report` are shortcuts for the same commands.
+
+## Parallel step execution
+
+Mark steps with `parallel: true` to run consecutive parallel steps concurrently.
+A non-parallel step acts as a barrier; output order always matches declaration
+order.
+
+```yaml
+steps:
+  - name: DNS Records
+    uses: dns.resolve
+    parallel: true        # runs at the same time as the next parallel step
+  - name: WHOIS
+    uses: whois.lookup
+    parallel: true
+  - name: Port Scan       # barrier — waits for the parallel batch above
+    uses: nmap.scan
+```
 
 ---
 

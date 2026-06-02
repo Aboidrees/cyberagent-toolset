@@ -4,17 +4,18 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 ---
 
-## Current state — v0.5.0
+## Current state — v0.6.0
 
 | Area | Status |
 | ------ | -------- |
 | 8 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute) | ✅ Done |
 | 7 Phase 1 executors (dns.reverse, email.security, ip.intel, http.security_score, http.waf_detect, http.fingerprint, tls.deep) | ✅ Done |
 | 7 Phase 2 executors (vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods) | ✅ Done |
+| Phase 3 scale & automation (parallel steps, scheduling, diff, watchlist, PDF/DOCX/HTML export, webhooks) | ✅ Done |
 | MCP server with dynamic playbook-driven tool registration (23 executor tools) | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks (incl. email-security, tls-deep, web-headers, vulnerability, owasp-top10, cloud-security) | ✅ Done |
-| CLI with `--target` flag, JSON + Markdown report output | ✅ Done |
+| Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
 | Full documentation suite | ✅ Done |
 
 ---
@@ -190,12 +191,12 @@ Identifies the technology stack from HTTP headers and body patterns — framewor
 
 ## Phase 2 — Vulnerability intelligence  *(shipped in v0.5.0)*
 
-> **Status:** All five Phase 2 executors below are shipped (`vuln.cve_lookup`,
-> `shodan.host`, `cloud.bucket_finder`, `http.fuzz_paths`, `http.git_leak`), plus
-> two extra WEBSCANNER checks (`http.cors_check`, `http.methods`) and the three new
-> playbooks. The **Report enhancement** sub-section (executive summary, risk matrix,
-> CVSS-classified Markdown reports) is the remaining Phase 2 item and is not yet
-> implemented.
+> **Status: complete.** All five Phase 2 executors below are shipped
+> (`vuln.cve_lookup`, `shodan.host`, `cloud.bucket_finder`, `http.fuzz_paths`,
+> `http.git_leak`), plus two extra WEBSCANNER checks (`http.cors_check`,
+> `http.methods`) and the three new playbooks. The **Report enhancement**
+> sub-section (executive summary, risk matrix, severity-classified findings in the
+> Markdown report) shipped in v0.6.0 alongside Phase 3.
 
 ### New executors
 
@@ -283,7 +284,13 @@ Checks for exposed `.git` directory and reconstructs leaked content indicators:
 
 ---
 
-## Phase 3 — Scale and automation
+## Phase 3 — Scale and automation  *(shipped in v0.6.0)*
+
+> **Status: complete.** All six features below are implemented: parallel step
+> execution, scheduled scanning (`node-cron`), diff reports, target watchlist,
+> PDF/DOCX/HTML report export (`pdfkit` / `docx`), and webhook notifications.
+> Runs now also carry an aggregated findings rollup with an executive summary and
+> risk matrix in the Markdown report.
 
 ### Parallel step execution
 

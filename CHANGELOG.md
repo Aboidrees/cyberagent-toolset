@@ -4,13 +4,47 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.6.0] - 2026-06-02
+
+Phase 3 — Scale and automation. Parallel execution, scheduling, diffing, batch
+watchlists, professional report export, and webhook notifications. The CLI is now
+multi-command (`run` · `diff` · `watch` · `schedule` · `report`).
+
+### Added for 0.6.0
+
+- **Parallel step execution** — steps flagged `parallel: true` run concurrently in
+  batches; a non-parallel step is a barrier. Output order is preserved.
+- **Scheduled scanning** — `schedule --playbook X --target Y --cron "0 8 * * 1"`
+  runs a playbook on a cron schedule (via `node-cron`); new findings flow through
+  the webhook path for monitoring.
+- **Diff reports** — `diff a.json b.json` highlights new/removed open ports,
+  subdomains, DNS records, certificate changes, and security findings. Exits
+  non-zero when something changed.
+- **Target watchlist** — `watch --list watchlist.yml` batch-runs many targets ×
+  playbooks in one command.
+- **Report export** — `report run.json --format pdf|docx|html` generates a branded
+  assessment report with executive summary, risk matrix, and findings table (via
+  `pdfkit` / `docx`).
+- **Webhook / notifications** — Slack (`SLACK_WEBHOOK_URL`) and generic
+  (`WEBHOOK_URL`) notifications on completion, gated by `NOTIFY_ON_SEVERITY`.
+- **Report enhancement** (the deferred Phase 2 item) — every run now carries an
+  aggregated, severity-rated findings rollup with an executive summary and risk
+  matrix at the top of the Markdown report.
+
+### Changed
+
+- CLI restructured into subcommands; the bare `-p <playbook> --target <host>` form
+  is preserved as the default command.
+- Added dependencies: `node-cron`, `pdfkit`, `docx`.
+- Version bumped 0.5.0 → 0.6.0.
+
 ## [0.5.0] - 2026-06-02
 
 Phase 2 — Vulnerability intelligence. Seven new executors (six keyless, one
 key-gated) and three new playbooks. The MCP server now exposes 23 executor tools
 across 12 production playbooks.
 
-### Added
+### Added for 0.5.0
 
 - **`vuln.cve_lookup`** — CVE lookup against the NVD (National Vulnerability
   Database, API v2). Match by CPE, keyword, or product+version; returns CVEs with
@@ -32,7 +66,7 @@ across 12 production playbooks.
 - Three new playbooks: `vulnerability-assessment`, `owasp-top10-recon`, and
   `cloud-security-assessment`.
 
-### Changed
+### Changed for 0.5.0
 
 - `all-tools-selftest` now exercises all 23 executors (was 16).
 - `_templates.md` gains two new stage sections — VULNERABILITY INTELLIGENCE and
@@ -54,7 +88,7 @@ Phase 1 — Deeper intelligence. Seven new recon executors (all keyless), three 
 playbooks, and a documentation refresh. The MCP server now exposes 16 executor
 tools (up from 8).
 
-### Added
+### Added for 0.4.0
 
 - **`dns.reverse`** — reverse DNS / PTR lookup and sweep. Accepts a single IP, an
   IPv4 CIDR range (concurrent sweep, capped at 256 hosts), or a hostname (resolves
@@ -80,7 +114,7 @@ tools (up from 8).
 - Three new playbooks: `email-security-assessment`, `tls-deep-assessment`, and
   `web-headers-assessment`.
 
-### Changed
+### Changed for 0.4.0
 
 - `all-tools-selftest` now exercises all 16 executors (was 9).
 - `_templates.md` reorganized into stage-segmented sections (PASSIVE/OSINT,
