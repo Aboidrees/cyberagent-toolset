@@ -9,7 +9,7 @@ description: >-
   Cloud-hosted exposure assessment — hosting provider, public storage buckets, and edge (CDN/WAF/TLS)
   configuration.
 vars:
-  target: example.com
+  target: fortmind.qa
   scheme: https
   timeout: 10000
 steps:

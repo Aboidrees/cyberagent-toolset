@@ -6,7 +6,7 @@ id: quick-web-recon
 title: Quick Web Reconnaissance
 description: Fast reconnaissance optimized for speed — DNS, HTTP/TLS, and passive subdomains, without lengthy scans.
 vars:
-  target: example.com
+  target: fortmind.qa
   scheme: https
   timeout: 5000
 steps:

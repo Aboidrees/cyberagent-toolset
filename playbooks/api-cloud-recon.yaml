@@ -9,7 +9,7 @@ description: >-
   Reconnaissance for APIs, microservices, and cloud platforms — REST/GraphQL endpoints, auth surfaces, and CDN
   detection.
 vars:
-  target: example.com
+  target: fortmind.qa
   scheme: https
   timeout: 10000
   apiTimeout: 15000
