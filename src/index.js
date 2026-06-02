@@ -1,3 +1,4 @@
+import './env.js';
 import fs from 'fs/promises';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -16,7 +17,7 @@ import { ensureDir } from './utils/fsx.js';
  *   schedule  — run a playbook on a cron schedule (long-running)
  *   report    — export a run JSON to PDF / DOCX / HTML
  *
- * Backwards compatible: `node src/index.js -p playbook.yaml --target host` still
+ * Backwards compatible: `node src/index.js -p playbook.yaml --target host` (or `cyberagent ...` if installed) still
  * works (it is the default command).
  */
 
@@ -42,7 +43,7 @@ const wrap = (fn) => async (argv) => {
 };
 
 await yargs(hideBin(process.argv))
-  .scriptName('mcp-recon')
+  .scriptName('cyberagent')
   // ── run (default) ──────────────────────────────────────────────────────────
   .command(
     ['run', '$0'],

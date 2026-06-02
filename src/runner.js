@@ -74,7 +74,9 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
 
   // Execute one step and return its output object (caller controls ordering).
   const runStep = async (step, i) => {
-    const stepCtx = deepTemplate(step, { ...ctx, content, fm });
+    // `env` is exposed so playbooks can reference keys, e.g.
+    // `apiKey: "{{env.SHODAN_API_KEY}}"`.
+    const stepCtx = deepTemplate(step, { ...ctx, env: process.env, content, fm });
     const fn = catalog.registry[stepCtx.uses];
     if (!fn) {
       return { name: stepCtx.name, uses: stepCtx.uses, error: `Unknown executor` };

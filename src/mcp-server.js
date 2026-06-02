@@ -15,6 +15,7 @@
  *       "args": ["/abs/path/to/src/mcp-server.js"] } } }
  */
 
+import './env.js';
 import { Server }               from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
