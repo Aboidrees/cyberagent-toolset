@@ -120,11 +120,54 @@ node src/index.js -p playbooks/web-headers-assessment.md --target example.com
 
 ---
 
+### Vulnerability Assessment (`vulnerability-assessment`)
+
+#### **8 steps · ~3–6 min**
+
+Phase 2 vulnerability-intelligence pass: nmap version scan, NVD CVE lookup for a named stack, Shodan host data (key-gated), exposed `.git` and cloud-bucket discovery, common-path fuzzing, and TLS/header posture. Override `--var cveKeyword="<product version>"` with the stack you discovered.
+
+```bash
+node src/index.js -p playbooks/vulnerability-assessment.md \
+  --var target=authorized-target.com --var cveKeyword="nginx 1.18.0"
+```
+
+> **Active + authorized only.** Includes nmap and path fuzzing.
+
+---
+
+### OWASP Top 10 Reconnaissance (`owasp-top10-recon`)
+
+#### **14 steps · ~3–5 min**
+
+Maps the recon phase of each OWASP Top 10 (2021) category to the executor that gathers the relevant signal — access-control surfaces (A01), deep TLS (A02), API surface (A03), fingerprint (A04), misconfig (A05), CVE lookup (A06), auth surfaces (A07), git/email integrity (A08), WAF/CDN (A09), and IP/DNS infrastructure (A10).
+
+```bash
+node src/index.js -p playbooks/owasp-top10-recon.md --target authorized-target.com
+```
+
+> **Active + authorized only.** Includes path fuzzing.
+
+---
+
+### Cloud Security Assessment (`cloud-security-assessment`)
+
+#### **11 steps · ~3–5 min**
+
+Cloud-hosted exposure: ASN/CNAME hosting classification, WAF/CDN fingerprint, public AWS S3 / GCP / Azure bucket discovery, passive subdomains, Shodan (key-gated), deep TLS, header grade, and exposed `.git` / API surface.
+
+```bash
+node src/index.js -p playbooks/cloud-security-assessment.md --target authorized-target.com
+```
+
+> **Active + authorized only.** Includes path fuzzing and bucket probing.
+
+---
+
 ### All-Tools Self Test (`all-tools-selftest`)
 
-#### **16 steps · ~3–5 min**
+#### **23 steps · ~5–8 min**
 
-Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, dns.reverse, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, http.security_score, http.waf_detect, http.fingerprint, tls.inspect, tls.deep, email.security, ip.intel — so you can confirm the whole engine works against a real target in one run.
+Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, dns.reverse, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, http.security_score, http.waf_detect, http.fingerprint, tls.inspect, tls.deep, email.security, ip.intel, vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods — so you can confirm the whole engine works against a real target in one run.
 
 Steps: DNS → WHOIS → subdomains → ping → traceroute → nmap top 100 → HTTP headers → HTTP GET → TLS → reverse DNS → email security → IP intel → header score → WAF detect → tech fingerprint → deep TLS
 

@@ -4,15 +4,16 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 ---
 
-## Current state — v0.4.0
+## Current state — v0.5.0
 
 | Area | Status |
 | ------ | -------- |
 | 8 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute) | ✅ Done |
-| 8 Phase 1 executors (dns.reverse, email.security, ip.intel, http.security_score, http.waf_detect, http.fingerprint, tls.deep) | ✅ Done |
-| MCP server with dynamic playbook-driven tool registration | ✅ Done |
+| 7 Phase 1 executors (dns.reverse, email.security, ip.intel, http.security_score, http.waf_detect, http.fingerprint, tls.deep) | ✅ Done |
+| 7 Phase 2 executors (vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods) | ✅ Done |
+| MCP server with dynamic playbook-driven tool registration (23 executor tools) | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
-| 9 production playbooks (quick, basic, security, comprehensive, API/cloud, network, email-security, tls-deep, web-headers) | ✅ Done |
+| 12 production playbooks (incl. email-security, tls-deep, web-headers, vulnerability, owasp-top10, cloud-security) | ✅ Done |
 | CLI with `--target` flag, JSON + Markdown report output | ✅ Done |
 | Full documentation suite | ✅ Done |
 
@@ -34,7 +35,7 @@ detailed spec below.
 | Reverse DNS / PTR sweep | `dns.reverse` | ✅ | — |
 | Email security (DMARC/DKIM/SPF/MTA-STS/BIMI) | `email.security` | ✅ | — |
 | ASN / IP intelligence (abuse reputation key-gated) | `ip.intel` | ✅ | — |
-| Shodan host data | `shodan.host` | ⬜ | P2 |
+| Shodan host data (key-gated) | `shodan.host` | ✅ | — |
 | Passive DNS history | `securitytrails.*` | ⬜ | P4 |
 
 ### LIVENESS
@@ -49,9 +50,9 @@ detailed spec below.
 | Check | Executor | Status | Phase |
 | ----- | -------- | ------ | ----- |
 | TCP connect + version scan | `nmap.scan` | ✅ | — |
-| CVE lookup from service versions | `vuln.cve_lookup` | ⬜ | P2 |
-| UDP scan | `nmap.udp` | ⬜ | P2 |
-| OS fingerprint | `nmap.os` | ⬜ | P2 |
+| CVE lookup from service versions | `vuln.cve_lookup` | ✅ | — |
+| UDP scan | `nmap.scan` (via `-sU`, root) | ⬜ | P2 |
+| OS fingerprint | `nmap.scan` (via `-O`, root) | ⬜ | P2 |
 
 ### WEBSCANNER  *(active)*
 
@@ -64,20 +65,20 @@ detailed spec below.
 | Deep TLS (weak ciphers, proto, chain, OCSP) | `tls.deep` | ✅ | — |
 | WAF / CDN fingerprint | `http.waf_detect` | ✅ | — |
 | Technology stack fingerprint | `http.fingerprint` | ✅ | — |
-| CORS misconfiguration | `http.cors_check` | ⬜ | P2 |
-| HTTP methods (OPTIONS/TRACE/PUT) | `http.methods` | ⬜ | P2 |
+| CORS misconfiguration | `http.cors_check` | ✅ | — |
+| HTTP methods (OPTIONS/TRACE/PUT) | `http.methods` | ✅ | — |
 
 ### ESCALATE  *(targeted, active — today via `http.get` playbook steps)*
 
 | Check | Executor | Status | Phase |
 | ----- | -------- | ------ | ----- |
 | Exposure probes (.env/.git/admin/backup/swagger) | `http.get` steps | ✅ | — |
-| Git repo leak detector | `http.git_leak` | ⬜ | P2 |
-| Directory / path fuzzer | `http.fuzz_paths` | ⬜ | P2 |
-| Cloud storage bucket finder | `cloud.bucket_finder` | ⬜ | P2 |
+| Git repo leak detector | `http.git_leak` | ✅ | — |
+| Directory / path fuzzer | `http.fuzz_paths` | ✅ | — |
+| Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
 | Nuclei template scan | `nuclei.scan` | ⬜ | P4 |
 
-**Today: 16 checks live ✅ · ~11 planned ⬜.** The `task_type` enum stays at four
+**Today: 23 checks live ✅ · ~4 planned ⬜.** The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.
@@ -187,7 +188,14 @@ Identifies the technology stack from HTTP headers and body patterns — framewor
 
 ---
 
-## Phase 2 — Vulnerability intelligence
+## Phase 2 — Vulnerability intelligence  *(shipped in v0.5.0)*
+
+> **Status:** All five Phase 2 executors below are shipped (`vuln.cve_lookup`,
+> `shodan.host`, `cloud.bucket_finder`, `http.fuzz_paths`, `http.git_leak`), plus
+> two extra WEBSCANNER checks (`http.cors_check`, `http.methods`) and the three new
+> playbooks. The **Report enhancement** sub-section (executive summary, risk matrix,
+> CVSS-classified Markdown reports) is the remaining Phase 2 item and is not yet
+> implemented.
 
 ### New executors
 
@@ -269,9 +277,9 @@ Checks for exposed `.git` directory and reconstructs leaked content indicators:
 
 | Playbook | Steps | Focus |
 | ---------- | ------- | ------- |
-| `vulnerability-assessment` | ~15 | CVE lookup · Shodan · bucket finder · git leak |
-| `owasp-top10-recon` | ~20 | Recon phase for each OWASP Top 10 category |
-| `cloud-security-assessment` | ~25 | AWS/GCP/Azure storage · cloud metadata endpoints · CDN misconfig |
+| `vulnerability-assessment` | 8 | CVE lookup · Shodan · bucket finder · git leak |
+| `owasp-top10-recon` | 14 | Recon phase for each OWASP Top 10 category |
+| `cloud-security-assessment` | 11 | AWS/GCP/Azure storage · cloud metadata endpoints · CDN misconfig |
 
 ---
 

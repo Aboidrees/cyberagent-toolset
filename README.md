@@ -24,7 +24,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
 | [MCP Integration](docs/mcp-integration.md) | MCP server setup, Claude Desktop config, interactive flow |
 | [Playbooks](docs/playbooks.md) | Available playbooks, format reference, variable templating |
-| [Executors](docs/executors.md) | All 16 executors — options, YAML syntax, return shape |
+| [Executors](docs/executors.md) | All 23 executors — options, YAML syntax, return shape |
 | [Creating Playbooks](docs/creating-playbooks.md) | Step-by-step guide to writing custom playbooks |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors, debug tips, performance tuning |
 | [Roadmap](docs/roadmap.md) | Planned executors, features, playbooks, and integrations |
@@ -63,6 +63,9 @@ Reports are saved to `runs/` as `.json` and `.md`.
 | `email-security-assessment` | 3 | SPF · DMARC · DKIM · MTA-STS · BIMI |
 | `tls-deep-assessment` | 3 | Protocols · weak ciphers · chain · OCSP · HSTS |
 | `web-headers-assessment` | 4 | A–F security header grade · WAF/CDN · tech stack |
+| `vulnerability-assessment` | 8 | CVE lookup · Shodan · bucket finder · git leak |
+| `owasp-top10-recon` | 14 | Recon mapped to each OWASP Top 10 category |
+| `cloud-security-assessment` | 11 | Cloud hosting · storage exposure · edge config |
 
 ---
 
@@ -75,15 +78,18 @@ mcp-recon-runner/
 │   ├── mcp-server.js         # MCP server (dynamic tool registration)
 │   ├── runner.js             # Playbook orchestration engine
 │   ├── executors/            # One file per recon capability
+│   │   ├── cloud.js          # cloud.bucket_finder (AWS/GCP/Azure)
 │   │   ├── dns.js            # dns.resolve · dns.reverse
 │   │   ├── email.js          # email.security (SPF/DMARC/DKIM/MTA-STS/BIMI)
-│   │   ├── http.js           # http.headers/get/security_score/waf_detect/fingerprint
+│   │   ├── http.js           # headers/get/security_score/waf_detect/fingerprint/cors_check/methods/fuzz_paths/git_leak
 │   │   ├── ip.js             # ip.intel (ASN / IP intelligence)
 │   │   ├── nmap.js
 │   │   ├── ping.js
+│   │   ├── shodan.js         # shodan.host (key-gated)
 │   │   ├── subdomains.js
 │   │   ├── tls.js            # tls.inspect · tls.deep
 │   │   ├── traceroute.js
+│   │   ├── vuln.js           # vuln.cve_lookup (NVD)
 │   │   └── whois.js
 │   └── utils/
 │       ├── fsx.js            # File system helpers

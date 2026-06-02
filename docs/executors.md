@@ -508,3 +508,165 @@ Vulnerability-oriented TLS analysis — extends `tls.inspect` with a protocol su
 **Returns:** `{ protocols, weakCiphers, chain, ocspStapling, hsts, findings }`.
 
 > **Note:** weak-cipher and legacy-protocol detection depends on the local OpenSSL build. A server that *only* speaks fully-removed algorithms (e.g. raw RC4-MD5) may be unreachable from a modern OpenSSL 3 client; this is reported distinctly as "could not complete a TLS handshake" rather than a false negative.
+
+---
+
+## vuln.cve_lookup
+
+CVE lookup against the National Vulnerability Database (NVD API v2). Matches by product/version, not by host — typically driven by what a version scan (`nmap.scan -sV`) discovered. Keyless; set `NVD_API_KEY` to raise the rate limit.
+
+**Playbook key:** `vuln.cve_lookup`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `keyword` | string | — | Free-text search, e.g. `"Apache httpd 2.4.49"` |
+| `cpe` | string | — | Exact CPE 2.3 name (alternative to keyword) |
+| `product` | string | — | Product name (combined with `version`) |
+| `version` | string | — | Product version |
+| `minCvss` | number | `0` | Minimum CVSS base score to include |
+| `severity` | string | — | Filter by CVSS v3 severity: LOW/MEDIUM/HIGH/CRITICAL |
+| `maxResults` | number | `20` | Max CVEs to return (cap 100) |
+| `apiKey` | string | `NVD_API_KEY` env | NVD API key for higher rate limits (optional) |
+
+```yaml
+- name: CVE Lookup
+  uses: vuln.cve_lookup
+  with:
+    keyword: "Apache httpd 2.4.49"
+    minCvss: 7.0
+```
+
+**Returns:** `{ query, totalMatched, returned, severityCounts, results: [{ id, cvss, severity, vector, description, url }] }` sorted by CVSS descending.
+
+---
+
+## shodan.host
+
+Shodan host lookup — open ports, services, banners, CVEs, and tags from Shodan's index. **Requires** a Shodan API key (`SHODAN_API_KEY` env or `apiKey`); returns a no-op note when no key is set, so it never fails a run.
+
+**Playbook key:** `shodan.host`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `apiKey` | string | `SHODAN_API_KEY` env | Shodan API key (required to run) |
+| `timeoutMs` | number | `15000` | Request timeout |
+
+```yaml
+- name: Shodan Host Data
+  uses: shodan.host
+```
+
+**Returns:** `{ target, ip, checked, found, org, ports, hostnames, tags, vulns, services }` — or `{ checked: false, note }` when no key is set.
+
+---
+
+## cloud.bucket_finder
+
+Cloud storage bucket finder — derives candidate bucket names from the target domain and probes AWS S3, GCP Cloud Storage, and Azure Blob endpoints for public exposure. Read-only GET probes; no credentials, no API key.
+
+**Playbook key:** `cloud.bucket_finder`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `extraNames` | string[] | `[]` | Additional candidate bucket names |
+| `concurrency` | number | `12` | Parallel probes (cap 32) |
+| `requestTimeoutMs` | number | `6000` | Per-probe timeout |
+| `timeoutMs` | number | step budget | Overall step budget (per-probe is bounded by `requestTimeoutMs`) |
+
+```yaml
+- name: Cloud Bucket Discovery
+  uses: cloud.bucket_finder
+```
+
+**Returns:** `{ target, candidatesTried, probesRun, found, exposed, findings: [{ name, provider, url, status, exists, access, severity }] }`. `public`/`public-listable` access is high severity; `private` (403) means the bucket exists but is locked down.
+
+---
+
+## http.fuzz_paths
+
+Active path enumeration against a built-in wordlist (`common`, `api`, `admin`, `php`, `asp`) or a custom array. Reports paths that exist by status code (anything that isn't a hard 404 / connection error). Concurrency-bounded. **Active — authorized targets only.**
+
+**Playbook key:** `http.fuzz_paths`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `wordlist` | string \| string[] | `common` | Built-in name or a custom array of paths |
+| `scheme` | string | `https` | `http` or `https` |
+| `threads` | number | `10` | Concurrency (cap 32) |
+| `requestTimeoutMs` | number | `5000` | Per-request timeout |
+| `timeoutMs` | number | step budget | Overall step budget (the runner caps the whole step; per-request is bounded by `requestTimeoutMs`) |
+
+```yaml
+- name: Path Discovery
+  uses: http.fuzz_paths
+  with:
+    wordlist: "common"
+```
+
+**Returns:** `{ target, wordlist, pathsTried, found, hits: [{ path, status, contentLength }] }`.
+
+---
+
+## http.git_leak
+
+Git repository leak detector — checks for an exposed `.git/` directory, validates that `/.git/HEAD` is a real git ref (not a catch-all page), then pulls indicators (remote origin URL, last commit message) from `/.git/config` and `/.git/COMMIT_EDITMSG`. Flags **critical** when reachable.
+
+**Playbook key:** `http.git_leak`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `scheme` | string | `https` | `http` or `https` |
+| `timeoutMs` | number | `8000` | Per-request timeout |
+
+```yaml
+- name: Git Repository Leak
+  uses: http.git_leak
+```
+
+**Returns:** `{ target, exposed, severity, checks, indicators: { remoteOrigin, lastCommitMessage }, note }`.
+
+---
+
+## http.cors_check
+
+CORS misconfiguration probe — sends a hostile `Origin` and inspects the `Access-Control-Allow-Origin` / `-Credentials` response. Flags origin reflection and the wildcard-plus-credentials combination.
+
+**Playbook key:** `http.cors_check`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `path` | string | `/` | URL path |
+| `scheme` | string | `https` | `http` or `https` |
+| `origin` | string | `https://evil.example.com` | Hostile Origin to test |
+| `timeoutMs` | number | `10000` | Request timeout |
+
+```yaml
+- name: CORS Misconfiguration
+  uses: http.cors_check
+  with:
+    path: "/api/"
+```
+
+**Returns:** `{ url, status, testedOrigin, allowOrigin, allowCredentials, reflectsOrigin, misconfigured, findings }`.
+
+---
+
+## http.methods
+
+HTTP methods audit — reads the `OPTIONS` `Allow` header and actively probes risky methods (PUT/DELETE/TRACE/PATCH) concurrently. Flags TRACE (Cross-Site Tracing) and accepted write methods. (CONNECT is intentionally excluded — Node treats it as a tunnel request that never returns a normal response.)
+
+**Playbook key:** `http.methods`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `path` | string | `/` | URL path |
+| `scheme` | string | `https` | `http` or `https` |
+| `requestTimeoutMs` | number | `6000` | Per-request timeout |
+| `timeoutMs` | number | step budget | Overall step budget (per-request is bounded by `requestTimeoutMs`) |
+
+```yaml
+- name: HTTP Methods Audit
+  uses: http.methods
+```
+
+**Returns:** `{ url, advertised, riskyAccepted: [{ method, status }], findings }`.
