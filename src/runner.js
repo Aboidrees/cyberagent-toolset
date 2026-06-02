@@ -16,6 +16,9 @@ import * as pingExec from './executors/ping.js';
 import * as tracerouteExec from './executors/traceroute.js';
 import * as emailExec from './executors/email.js';
 import * as ipExec from './executors/ip.js';
+import * as vulnExec from './executors/vuln.js';
+import * as shodanExec from './executors/shodan.js';
+import * as cloudExec from './executors/cloud.js';
 
 // Registry mapping playbook 'uses' strings to executor functions
 const registry = {
@@ -28,13 +31,20 @@ const registry = {
   'http.security_score': httpExec.securityScore,
   'http.waf_detect': httpExec.wafDetect,
   'http.fingerprint': httpExec.fingerprint,
+  'http.fuzz_paths': httpExec.fuzzPaths,
+  'http.git_leak': httpExec.gitLeak,
+  'http.cors_check': httpExec.corsCheck,
+  'http.methods': httpExec.methods,
   'tls.inspect': tlsExec.inspectTLS,
   'tls.deep': tlsExec.deepTLS,
   'subdomains.passive': subsExec.passive,
   'network.ping': pingExec.ping,
   'network.traceroute': tracerouteExec.traceroute,
   'email.security': emailExec.security,
-  'ip.intel': ipExec.intel
+  'ip.intel': ipExec.intel,
+  'vuln.cve_lookup': vulnExec.cveLookup,
+  'shodan.host': shodanExec.hostLookup,
+  'cloud.bucket_finder': cloudExec.bucketFinder
 };
 
 // Replace templates like {{vars.target}} with values from context

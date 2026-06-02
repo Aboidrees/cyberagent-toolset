@@ -1,5 +1,5 @@
 /**
- * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.4.0
+ * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.5.0
  *
  * Architecture
  * ────────────
@@ -52,13 +52,17 @@ import { resolveDNS, reverseDNS }              from './executors/dns.js';
 import { lookupWhois }                         from './executors/whois.js';
 import { scanNmap }                            from './executors/nmap.js';
 import { getHeaders, getPath, securityScore,
-         wafDetect, fingerprint }              from './executors/http.js';
+         wafDetect, fingerprint, fuzzPaths,
+         gitLeak, corsCheck, methods }         from './executors/http.js';
 import { inspectTLS, deepTLS }                 from './executors/tls.js';
 import { passive }                             from './executors/subdomains.js';
 import { ping }                                from './executors/ping.js';
 import { traceroute }                          from './executors/traceroute.js';
 import { security as emailSecurity }           from './executors/email.js';
 import { intel as ipIntel }                    from './executors/ip.js';
+import { cveLookup }                            from './executors/vuln.js';
+import { hostLookup as shodanHost }             from './executors/shodan.js';
+import { bucketFinder }                         from './executors/cloud.js';
 
 // Utilities
 import { runPlaybook }                       from './runner.js';
@@ -308,6 +312,121 @@ const EXECUTOR_TOOLS = [
       required: ['target'],
     },
   },
+  {
+    name: 'recon_cve_lookup',
+    description:
+      'CVE lookup against the NVD (National Vulnerability Database, API v2). Match by ' +
+      'cpe, keyword, or product+version. Returns CVEs with CVSS score, severity, and summary. ' +
+      'Keyless (set NVD_API_KEY to raise the rate limit).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        keyword: { type: 'string', description: 'Free-text search, e.g. "Apache 2.4.49"' },
+        cpe:     { type: 'string', description: 'Exact CPE 2.3 name (optional)' },
+        product: { type: 'string', description: 'Product name (combined with version)' },
+        version: { type: 'string', description: 'Product version' },
+        minCvss: { type: 'number', description: 'Minimum CVSS base score to include. Default: 0' },
+        severity:{ type: 'string', description: 'Filter by CVSS v3 severity: LOW|MEDIUM|HIGH|CRITICAL' },
+        maxResults: { type: 'number', description: 'Max CVEs to return. Default: 20' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'recon_shodan_host',
+    description:
+      'Shodan host lookup — open ports, services, banners, CVEs, and tags from Shodan\'s index. ' +
+      'Requires SHODAN_API_KEY (or apiKey); returns a no-op note when no key is set.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', description: 'IP or hostname (hostname is A-resolved)' },
+        apiKey: { type: 'string', description: 'Shodan API key (or set SHODAN_API_KEY env)' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_bucket_finder',
+    description:
+      'Cloud storage bucket finder — derives candidate bucket names from the target domain and ' +
+      'probes AWS S3, GCP Cloud Storage, and Azure Blob for public exposure. Read-only, keyless.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:     { type: 'string', description: 'Base domain (e.g. "example.com")' },
+        extraNames: { type: 'array', items: { type: 'string' }, description: 'Extra candidate bucket names (optional)' },
+        timeoutMs:  { type: 'number', description: 'Per-probe timeout ms. Default: 8000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_fuzz_paths',
+    description:
+      'Active path enumeration — probes a built-in wordlist (common|api|admin|php|asp) or a custom ' +
+      'list against the target and reports which paths exist by status code. Active — authorized targets only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:   { type: 'string', description: 'Hostname or IP' },
+        wordlist: { type: 'string', description: 'Built-in list: common|api|admin|php|asp. Default: common' },
+        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
+        threads:  { type: 'number', description: 'Concurrency. Default: 10' },
+        timeoutMs:{ type: 'number', description: 'Per-request timeout ms. Default: 5000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_git_leak',
+    description:
+      'Git repository leak detector — checks for an exposed .git/ directory and pulls indicators ' +
+      '(remote origin URL, last commit message) when reachable. Flags critical on exposure.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:   { type: 'string', description: 'Hostname or IP' },
+        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
+        timeoutMs:{ type: 'number', description: 'Per-request timeout ms. Default: 8000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_cors_check',
+    description:
+      'CORS misconfiguration probe — sends a hostile Origin and inspects the ' +
+      'Access-Control-Allow-Origin / -Credentials response. Flags origin reflection and ' +
+      'wildcard-plus-credentials.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:   { type: 'string', description: 'Hostname or IP' },
+        path:     { type: 'string', description: 'URL path. Default: "/"' },
+        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
+        origin:   { type: 'string', description: 'Test Origin header. Default: https://evil.example.com' },
+        timeoutMs:{ type: 'number', description: 'Timeout ms. Default: 10000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_http_methods',
+    description:
+      'HTTP methods audit — reads the OPTIONS Allow header and actively probes risky methods ' +
+      '(PUT/DELETE/TRACE/PATCH). Flags TRACE (XST) and accepted write methods.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:   { type: 'string', description: 'Hostname or IP' },
+        path:     { type: 'string', description: 'URL path. Default: "/"' },
+        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
+        timeoutMs:{ type: 'number', description: 'Per-request timeout ms. Default: 8000' },
+      },
+      required: ['target'],
+    },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -415,7 +534,7 @@ async function main() {
 
   // ── MCP server ─────────────────────────────────────────────────────────────
   const server = new Server(
-    { name: 'mcp-recon-runner', version: '0.4.0' },
+    { name: 'mcp-recon-runner', version: '0.5.0' },
     { capabilities: { tools: {} } }
   );
 
@@ -527,6 +646,62 @@ async function main() {
         case 'recon_tls_deep':
           result = await deepTLS(args.target, {
             port: args.port,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_cve_lookup':
+          result = await cveLookup(null, {
+            keyword: args.keyword,
+            cpe: args.cpe,
+            product: args.product,
+            version: args.version,
+            minCvss: args.minCvss,
+            severity: args.severity,
+            maxResults: args.maxResults,
+          });
+          break;
+
+        case 'recon_shodan_host':
+          result = await shodanHost(args.target, { apiKey: args.apiKey });
+          break;
+
+        case 'recon_bucket_finder':
+          result = await bucketFinder(args.target, {
+            extraNames: args.extraNames,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_fuzz_paths':
+          result = await fuzzPaths(args.target, {
+            wordlist: args.wordlist,
+            scheme: args.scheme,
+            threads: args.threads,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_git_leak':
+          result = await gitLeak(args.target, {
+            scheme: args.scheme,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_cors_check':
+          result = await corsCheck(args.target, {
+            path: args.path,
+            scheme: args.scheme,
+            origin: args.origin,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_http_methods':
+          result = await methods(args.target, {
+            path: args.path,
+            scheme: args.scheme,
             timeoutMs: args.timeoutMs,
           });
           break;
@@ -645,7 +820,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `MCP Recon Runner v0.4.0 ready — ${ALL_TOOLS.length} tools registered ` +
+    `MCP Recon Runner v0.5.0 ready — ${ALL_TOOLS.length} tools registered ` +
     `(${EXECUTOR_TOOLS.length} executor + 3 orchestration + ${PLAYBOOKS.length} playbook)\n`
   );
 }
