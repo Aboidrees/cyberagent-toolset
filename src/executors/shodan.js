@@ -35,7 +35,14 @@ export async function hostLookup(target, opts = {}) {
     };
   }
 
-  const ip = await resolveIpv4(cleanTarget);
+  let ip;
+  try {
+    ip = await resolveIpv4(cleanTarget);
+  } catch (e) {
+    // Mirror the other failure paths with a structured note rather than throwing.
+    return { target: cleanTarget, checked: false, note: `Could not resolve an IPv4 address: ${e.message}` };
+  }
+
   const res = await axios.get(`https://api.shodan.io/shodan/host/${ip}`, {
     params: { key: apiKey },
     timeout: opts.timeoutMs || 15000,

@@ -356,8 +356,10 @@ export async function fuzzPaths(target, opts = {}) {
 
   const hits = [];
   async function probe(path) {
-    const url = buildUrl(scheme, cleanTarget, path);
     try {
+      // buildUrl is inside the try so a malformed custom-wordlist entry is
+      // skipped rather than rejecting the whole batch and discarding hits.
+      const url = buildUrl(scheme, cleanTarget, path);
       const res = await axios.get(url, {
         timeout: reqTimeoutMs,
         validateStatus: () => true,
@@ -372,7 +374,7 @@ export async function fuzzPaths(target, opts = {}) {
         hits.push({ path, status: res.status, contentLength: len ? Number(len) : null });
       }
     } catch {
-      // connection refused / timeout → treat as not present
+      // bad path / connection refused / timeout → treat as not present
     }
   }
 
