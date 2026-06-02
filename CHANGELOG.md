@@ -40,13 +40,13 @@ stays green.
 - Attack-lifecycle taxonomy: phases `reconnaissance` · `scanning` · `gaining-access`
   (with `maintaining-access` / `covering-tracks` as out-of-scope vocabulary only).
 
-## [0.6.0] - 2026-06-02
+## [0.6.1] - 2026-06-02
 
 Phase 3 — Scale and automation. Parallel execution, scheduling, diffing, batch
 watchlists, professional report export, and webhook notifications. The CLI is now
 multi-command (`run` · `diff` · `watch` · `schedule` · `report`).
 
-### Added for 0.6.0
+### Added for 0.6.1
 
 - **Parallel step execution** — steps flagged `parallel: true` run concurrently in
   batches; a non-parallel step is a barrier. Output order is preserved.
@@ -67,7 +67,7 @@ multi-command (`run` · `diff` · `watch` · `schedule` · `report`).
   aggregated, severity-rated findings rollup with an executive summary and risk
   matrix at the top of the Markdown report.
 
-### Changed
+### Changed for 0.6.0
 
 - CLI restructured into subcommands; the bare `-p <playbook> --target <host>` form
   is preserved as the default command.
