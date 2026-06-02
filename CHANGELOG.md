@@ -9,7 +9,7 @@ project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 Phase 4 — tool expansion. **23 → 40 executors** across **13 extensions**, plus the
 Nuclei multiplier (thousands of templated checks). MCP now exposes 57 tools.
 
-### Added
+### Added for 0.8.0
 
 - **Keyless executor batch (+12):**
   - DNS: `dns.dnssec` (DoH), `dns.caa`, `subdomains.bruteforce`.
@@ -23,7 +23,7 @@ Nuclei multiplier (thousands of templated checks). MCP now exposes 57 tools.
   `github.leaks`.
 - `.env.example` documents the new keys (SecurityTrails, Censys, GitHub token).
 
-### Changed
+### Changed for 0.8.0
 
 - `all-tools-selftest` now exercises all 40 executors (passes 40/40).
 - Multi-request executors (`network.banner`) decouple per-request timeout from the
@@ -39,7 +39,7 @@ phase; the core is an engine + catalog that discovers them (locally and from npm
 plugins). No new executors — the 23 are re-homed, and the 23-executor self-test
 stays green.
 
-### Changed
+### Changed for 0.7.0
 
 - **Project renamed** `mcp-recon-runner` → `cyberagent-toolset`. Bins are now
   `cyberagent` (CLI) and `cyberagent-mcp` (server); the MCP tool prefix is `cats_`.
@@ -58,7 +58,7 @@ stays green.
   in each extension's `report.js`.
 - `docs/architecture.md` documents the model; version bumped 0.6.0 → 0.7.0.
 
-### Added
+### Added for 0.7.0
 
 - **Installable extensions, day one.** Local `extensions/` load out of the box;
   npm packages named `cyberagent-ext-*` / `@cyberagent/ext-*` auto-register via the

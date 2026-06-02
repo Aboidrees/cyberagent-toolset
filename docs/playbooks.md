@@ -165,9 +165,9 @@ node src/index.js -p playbooks/cloud-security-assessment.yaml --target authorize
 
 ### All-Tools Self Test (`all-tools-selftest`)
 
-#### **23 steps · ~5–8 min**
+#### **40 steps · ~8–12 min**
 
-Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, dns.reverse, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, http.security_score, http.waf_detect, http.fingerprint, tls.inspect, tls.deep, email.security, ip.intel, vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods — so you can confirm the whole engine works against a real target in one run.
+Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, dns.reverse, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, http.security_score, http.waf_detect, http.fingerprint, tls.inspect, tls.deep, email.security, ip.intel, vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods, dns.dnssec, dns.caa, subdomains.bruteforce, http.cookies, http.robots, http.secrets, http.open_redirect, http.subdomain_takeover, web.wayback, nmap.udp, nmap.os, network.banner, nuclei.scan, securitytrails.*, censys.host, github.leaks — so you can confirm the whole engine works against a real target in one run.
 
 Steps: DNS → WHOIS → subdomains → ping → traceroute → nmap → HTTP headers/get → TLS → reverse DNS → email → IP intel → header score → WAF → fingerprint → deep TLS → CVE lookup → Shodan → bucket finder → path fuzz → git leak → CORS → HTTP methods
 
