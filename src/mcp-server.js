@@ -1,5 +1,5 @@
 /**
- * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.3.0
+ * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.4.0
  *
  * Architecture
  * ────────────
@@ -48,14 +48,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Executors
-import { resolveDNS }          from './executors/dns.js';
-import { lookupWhois }         from './executors/whois.js';
-import { scanNmap }            from './executors/nmap.js';
-import { getHeaders, getPath } from './executors/http.js';
-import { inspectTLS }          from './executors/tls.js';
-import { passive }             from './executors/subdomains.js';
-import { ping }                from './executors/ping.js';
-import { traceroute }          from './executors/traceroute.js';
+import { resolveDNS, reverseDNS }              from './executors/dns.js';
+import { lookupWhois }                         from './executors/whois.js';
+import { scanNmap }                            from './executors/nmap.js';
+import { getHeaders, getPath, securityScore,
+         wafDetect, fingerprint }              from './executors/http.js';
+import { inspectTLS, deepTLS }                 from './executors/tls.js';
+import { passive }                             from './executors/subdomains.js';
+import { ping }                                from './executors/ping.js';
+import { traceroute }                          from './executors/traceroute.js';
+import { security as emailSecurity }           from './executors/email.js';
+import { intel as ipIntel }                    from './executors/ip.js';
 
 // Utilities
 import { runPlaybook }                       from './runner.js';
@@ -196,6 +199,115 @@ const EXECUTOR_TOOLS = [
       required: ['target'],
     },
   },
+  {
+    name: 'recon_dns_reverse',
+    description:
+      'Reverse DNS (PTR) lookup / sweep. Accepts a single IP, an IPv4 CIDR range ' +
+      '(sweeps every host, capped at 256), or a hostname (resolves then reverses). ' +
+      'Returns a per-IP PTR map plus a flat name list.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:   { type: 'string', description: 'IP, IPv4 CIDR (e.g. 192.168.1.0/24), or hostname' },
+        maxHosts: { type: 'number', description: 'Max addresses for a CIDR sweep. Default: 256' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_email_security',
+    description:
+      'Email security posture — SPF, DMARC, DKIM (probes common selectors), MTA-STS, and BIMI. ' +
+      'Passive DNS + one HTTPS fetch for the MTA-STS policy. Flags spoofing-enabling misconfigs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:    { type: 'string', description: 'Domain (e.g. "example.com")' },
+        selectors: { type: 'array', items: { type: 'string' }, description: 'DKIM selectors to probe (optional)' },
+        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 8000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_ip_intel',
+    description:
+      'ASN / IP intelligence via Team Cymru (keyless): ASN, BGP prefix, country, registry, ' +
+      'and hosting/CDN classification. Abuse reputation is included only if ABUSEIPDB_API_KEY is set.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', description: 'IP or hostname (hostname is A-resolved)' },
+        ip:     { type: 'string', description: 'Explicit IP to analyse instead of resolving target (optional)' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_http_security_score',
+    description:
+      'Security-header scorer — grades Content-Security-Policy, HSTS, X-Frame-Options, ' +
+      'X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-* on an A–F scale ' +
+      'with per-header remediation advice and info-leak detection.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:    { type: 'string', description: 'Hostname or IP' },
+        path:      { type: 'string', description: 'URL path. Default: "/"' },
+        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
+        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_http_waf_detect',
+    description:
+      'WAF / CDN fingerprint from response headers, cookies, and banners. Detects Cloudflare, ' +
+      'AWS WAF/CloudFront, Akamai, Imperva/Incapsula, Sucuri, F5 BIG-IP, Fastly, Varnish, Azure Front Door.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:    { type: 'string', description: 'Hostname or IP' },
+        path:      { type: 'string', description: 'URL path. Default: "/"' },
+        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
+        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_http_fingerprint',
+    description:
+      'Technology stack fingerprint from headers and HTML body — server, language, framework, ' +
+      'CMS, analytics, and JS libraries.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:    { type: 'string', description: 'Hostname or IP' },
+        path:      { type: 'string', description: 'URL path. Default: "/"' },
+        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
+        deep:      { type: 'boolean', description: 'Also inspect HTML body markers. Default: true' },
+        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
+      },
+      required: ['target'],
+    },
+  },
+  {
+    name: 'recon_tls_deep',
+    description:
+      'Deep TLS analysis — protocol support matrix (flags TLS 1.0/1.1), weak-cipher negotiation ' +
+      '(RC4/3DES/NULL), certificate chain validation, OCSP stapling, and HSTS/preload status.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:    { type: 'string', description: 'Hostname' },
+        port:      { type: 'number', description: 'TLS port. Default: 443' },
+        timeoutMs: { type: 'number', description: 'Per-probe timeout ms. Default: 10000' },
+      },
+      required: ['target'],
+    },
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -303,7 +415,7 @@ async function main() {
 
   // ── MCP server ─────────────────────────────────────────────────────────────
   const server = new Server(
-    { name: 'mcp-recon-runner', version: '0.3.0' },
+    { name: 'mcp-recon-runner', version: '0.4.0' },
     { capabilities: { tools: {} } }
   );
 
@@ -368,6 +480,53 @@ async function main() {
         case 'recon_traceroute':
           result = await traceroute(args.target, {
             maxHops: args.maxHops,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_dns_reverse':
+          result = await reverseDNS(args.target, { maxHosts: args.maxHosts });
+          break;
+
+        case 'recon_email_security':
+          result = await emailSecurity(args.target, {
+            selectors: args.selectors,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_ip_intel':
+          result = await ipIntel(args.target, { ip: args.ip });
+          break;
+
+        case 'recon_http_security_score':
+          result = await securityScore(args.target, {
+            path: args.path,
+            scheme: args.scheme,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_http_waf_detect':
+          result = await wafDetect(args.target, {
+            path: args.path,
+            scheme: args.scheme,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_http_fingerprint':
+          result = await fingerprint(args.target, {
+            path: args.path,
+            scheme: args.scheme,
+            deep: args.deep,
+            timeoutMs: args.timeoutMs,
+          });
+          break;
+
+        case 'recon_tls_deep':
+          result = await deepTLS(args.target, {
+            port: args.port,
             timeoutMs: args.timeoutMs,
           });
           break;
@@ -486,7 +645,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `MCP Recon Runner v0.3.0 ready — ${ALL_TOOLS.length} tools registered ` +
+    `MCP Recon Runner v0.4.0 ready — ${ALL_TOOLS.length} tools registered ` +
     `(${EXECUTOR_TOOLS.length} executor + 3 orchestration + ${PLAYBOOKS.length} playbook)\n`
   );
 }

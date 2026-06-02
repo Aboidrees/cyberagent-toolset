@@ -14,18 +14,27 @@ import * as tlsExec from './executors/tls.js';
 import * as subsExec from './executors/subdomains.js';
 import * as pingExec from './executors/ping.js';
 import * as tracerouteExec from './executors/traceroute.js';
+import * as emailExec from './executors/email.js';
+import * as ipExec from './executors/ip.js';
 
 // Registry mapping playbook 'uses' strings to executor functions
 const registry = {
   'dns.resolve': dnsExec.resolveDNS,
+  'dns.reverse': dnsExec.reverseDNS,
   'whois.lookup': whoisExec.lookupWhois,
   'nmap.scan': nmapExec.scanNmap,
   'http.headers': httpExec.getHeaders,
   'http.get': httpExec.getPath,
+  'http.security_score': httpExec.securityScore,
+  'http.waf_detect': httpExec.wafDetect,
+  'http.fingerprint': httpExec.fingerprint,
   'tls.inspect': tlsExec.inspectTLS,
+  'tls.deep': tlsExec.deepTLS,
   'subdomains.passive': subsExec.passive,
   'network.ping': pingExec.ping,
-  'network.traceroute': tracerouteExec.traceroute
+  'network.traceroute': tracerouteExec.traceroute,
+  'email.security': emailExec.security,
+  'ip.intel': ipExec.intel
 };
 
 // Replace templates like {{vars.target}} with values from context
