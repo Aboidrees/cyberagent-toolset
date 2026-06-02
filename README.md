@@ -24,7 +24,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
 | [MCP Integration](docs/mcp-integration.md) | MCP server setup, Claude Desktop config, interactive flow |
 | [Playbooks](docs/playbooks.md) | Available playbooks, format reference, variable templating |
-| [Executors](docs/executors.md) | All 8 executors — options, YAML syntax, return shape |
+| [Executors](docs/executors.md) | All 16 executors — options, YAML syntax, return shape |
 | [Creating Playbooks](docs/creating-playbooks.md) | Step-by-step guide to writing custom playbooks |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors, debug tips, performance tuning |
 | [Roadmap](docs/roadmap.md) | Planned executors, features, playbooks, and integrations |
@@ -56,10 +56,13 @@ Reports are saved to `runs/` as `.json` and `.md`.
 |----------|-------|-------|
 | `quick-web-recon` | 8 | Fast essentials — DNS, headers, TLS, subdomains |
 | `web-basic-recon` | 7 | DNS · WHOIS · ports · HTTP · TLS · subdomains |
-| `web-security-recon` | 32 | Exposed files, admin panels, framework leaks |
+| `web-security-recon` | 51 | Exposed files, admin panels, framework leaks |
 | `comprehensive-web-recon` | 37 | Full infrastructure + web + security sweep |
 | `api-cloud-recon` | 39 | REST/GraphQL · cloud · auth · CDN detection |
 | `network-connectivity-test` | 2 | Ping + traceroute diagnostics |
+| `email-security-assessment` | 3 | SPF · DMARC · DKIM · MTA-STS · BIMI |
+| `tls-deep-assessment` | 3 | Protocols · weak ciphers · chain · OCSP · HSTS |
+| `web-headers-assessment` | 4 | A–F security header grade · WAF/CDN · tech stack |
 
 ---
 
@@ -72,12 +75,14 @@ mcp-recon-runner/
 │   ├── mcp-server.js         # MCP server (dynamic tool registration)
 │   ├── runner.js             # Playbook orchestration engine
 │   ├── executors/            # One file per recon capability
-│   │   ├── dns.js
-│   │   ├── http.js
+│   │   ├── dns.js            # dns.resolve · dns.reverse
+│   │   ├── email.js          # email.security (SPF/DMARC/DKIM/MTA-STS/BIMI)
+│   │   ├── http.js           # http.headers/get/security_score/waf_detect/fingerprint
+│   │   ├── ip.js             # ip.intel (ASN / IP intelligence)
 │   │   ├── nmap.js
 │   │   ├── ping.js
 │   │   ├── subdomains.js
-│   │   ├── tls.js
+│   │   ├── tls.js            # tls.inspect · tls.deep
 │   │   ├── traceroute.js
 │   │   └── whois.js
 │   └── utils/

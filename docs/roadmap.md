@@ -4,14 +4,15 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 ---
 
-## Current state — v0.3.0
+## Current state — v0.4.0
 
 | Area | Status |
 | ------ | -------- |
 | 8 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute) | ✅ Done |
+| 8 Phase 1 executors (dns.reverse, email.security, ip.intel, http.security_score, http.waf_detect, http.fingerprint, tls.deep) | ✅ Done |
 | MCP server with dynamic playbook-driven tool registration | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
-| 6 production playbooks (quick, basic, security, comprehensive, API/cloud, network) | ✅ Done |
+| 9 production playbooks (quick, basic, security, comprehensive, API/cloud, network, email-security, tls-deep, web-headers) | ✅ Done |
 | CLI with `--target` flag, JSON + Markdown report output | ✅ Done |
 | Full documentation suite | ✅ Done |
 
@@ -30,9 +31,9 @@ detailed spec below.
 | DNS records (A/AAAA/CNAME/NS/MX/TXT/PTR/SOA) | `dns.resolve` | ✅ | — |
 | WHOIS registration | `whois.lookup` | ✅ | — |
 | Passive subdomains (crt.sh) | `subdomains.passive` | ✅ | — |
-| Reverse DNS / PTR sweep | `dns.reverse` | ⬜ | P1 |
-| Email security (DMARC/DKIM/SPF/MTA-STS/BIMI) | `email.security` | ⬜ | P1 |
-| ASN / IP intelligence + abuse reputation | `ip.intel` | ⬜ | P1 |
+| Reverse DNS / PTR sweep | `dns.reverse` | ✅ | — |
+| Email security (DMARC/DKIM/SPF/MTA-STS/BIMI) | `email.security` | ✅ | — |
+| ASN / IP intelligence (abuse reputation key-gated) | `ip.intel` | ✅ | — |
 | Shodan host data | `shodan.host` | ⬜ | P2 |
 | Passive DNS history | `securitytrails.*` | ⬜ | P4 |
 
@@ -59,10 +60,10 @@ detailed spec below.
 | HTTP headers + server banner | `http.headers` | ✅ | — |
 | HTTP GET (body/status) | `http.get` | ✅ | — |
 | TLS cert metadata | `tls.inspect` | ✅ | — |
-| Security-header A–F score | `http.security_score` | ⬜ | P1 |
-| Deep TLS (weak ciphers, proto, chain, OCSP) | `tls.deep` | ⬜ | P1 |
-| WAF / CDN fingerprint | `http.waf_detect` | ⬜ | P1 |
-| Technology stack fingerprint | `http.fingerprint` | ⬜ | P1 |
+| Security-header A–F score | `http.security_score` | ✅ | — |
+| Deep TLS (weak ciphers, proto, chain, OCSP) | `tls.deep` | ✅ | — |
+| WAF / CDN fingerprint | `http.waf_detect` | ✅ | — |
+| Technology stack fingerprint | `http.fingerprint` | ✅ | — |
 | CORS misconfiguration | `http.cors_check` | ⬜ | P2 |
 | HTTP methods (OPTIONS/TRACE/PUT) | `http.methods` | ⬜ | P2 |
 
@@ -76,7 +77,7 @@ detailed spec below.
 | Cloud storage bucket finder | `cloud.bucket_finder` | ⬜ | P2 |
 | Nuclei template scan | `nuclei.scan` | ⬜ | P4 |
 
-**Today: 9 checks live ✅ · ~18 planned ⬜.** The `task_type` enum stays at four
+**Today: 16 checks live ✅ · ~11 planned ⬜.** The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.

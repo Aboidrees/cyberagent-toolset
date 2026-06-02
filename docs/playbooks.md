@@ -84,13 +84,49 @@ node src/index.js -p playbooks/network-connectivity-test.md --target example.com
 
 ---
 
+### Email Security Assessment (`email-security-assessment`)
+
+#### **3 steps · ~1 min**
+
+Passive evaluation of a domain's email-authentication posture — SPF, DMARC, DKIM, MTA-STS, and BIMI — with severity-rated findings and an at-a-glance summary. No packets reach the mail servers (DNS lookups plus one HTTPS fetch for the MTA-STS policy). Safe to run against any domain.
+
+```bash
+node src/index.js -p playbooks/email-security-assessment.md --target example.com
+```
+
+---
+
+### TLS Deep Assessment (`tls-deep-assessment`)
+
+#### **3 steps · ~1–2 min**
+
+Vulnerability-oriented TLS analysis — protocol support matrix (flags TLS 1.0/1.1), weak-cipher probes (RC4/3DES/NULL), certificate chain validation, OCSP stapling, and HSTS/preload status — alongside the baseline certificate metadata.
+
+```bash
+node src/index.js -p playbooks/tls-deep-assessment.md --target example.com
+```
+
+---
+
+### Web Headers Assessment (`web-headers-assessment`)
+
+#### **4 steps · ~1 min**
+
+Focused look at the HTTP response surface: an A–F security-header grade with per-header remediation advice, a WAF/CDN fingerprint, and a technology-stack fingerprint.
+
+```bash
+node src/index.js -p playbooks/web-headers-assessment.md --target example.com
+```
+
+---
+
 ### All-Tools Self Test (`all-tools-selftest`)
 
-#### **9 steps · ~2–3 min**
+#### **16 steps · ~3–5 min**
 
-Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, tls.inspect — so you can confirm the whole engine works against a real target in one run.
+Diagnostic playbook that exercises **every executor exactly once** — dns.resolve, dns.reverse, whois.lookup, subdomains.passive, network.ping, network.traceroute, nmap.scan, http.headers, http.get, http.security_score, http.waf_detect, http.fingerprint, tls.inspect, tls.deep, email.security, ip.intel — so you can confirm the whole engine works against a real target in one run.
 
-Steps: DNS → WHOIS → subdomains → ping → traceroute → nmap top 100 → HTTP headers → HTTP GET → TLS
+Steps: DNS → WHOIS → subdomains → ping → traceroute → nmap top 100 → HTTP headers → HTTP GET → TLS → reverse DNS → email security → IP intel → header score → WAF detect → tech fingerprint → deep TLS
 
 > **Active + authorized only.** Includes nmap, ping, and traceroute; requires `nmap` and `traceroute` installed on the host. Run only against assets you own or are authorized to scan.
 

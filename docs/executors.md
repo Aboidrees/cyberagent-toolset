@@ -331,3 +331,180 @@ Traces the network path hop-by-hop to the target.
 ```
 
 Hops with `timeout: true` indicate filtered or unreachable nodes (`* * *`).
+
+---
+
+## dns.reverse
+
+Reverse DNS (PTR) lookup or sweep. Accepts a single IP, an IPv4 CIDR range (sweeps every host), or a hostname (resolves A/AAAA first, then reverses each address).
+
+**Playbook key:** `dns.reverse`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `maxHosts` | number | `256` | Upper bound on addresses for a CIDR sweep |
+
+```yaml
+- name: PTR Sweep
+  uses: dns.reverse
+  with:
+    maxHosts: 256
+```
+
+**Returns:**
+
+```json
+{
+  "target": "1.1.1.1",
+  "resolvedFrom": "ip",
+  "ipCount": 1,
+  "ptr": { "1.1.1.1": ["one.one.one.one"] },
+  "names": ["one.one.one.one"]
+}
+```
+
+---
+
+## email.security
+
+Evaluates a domain's email authentication posture — SPF, DMARC, DKIM, MTA-STS, BIMI. Passive DNS lookups plus one HTTPS fetch for the MTA-STS policy file. No API key required.
+
+**Playbook key:** `email.security`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `selectors` | string[] | common set | DKIM selectors to probe |
+| `timeoutMs` | number | `8000` | MTA-STS policy fetch timeout |
+| `dnsTimeoutMs` | number | `6000` | Per-DNS-lookup cap (all lookups run concurrently) |
+
+```yaml
+- name: Email Security
+  uses: email.security
+  with:
+    selectors: ["default", "google", "selector1", "selector2"]
+```
+
+**Returns:** Per-check objects (`spf`, `dmarc`, `dkim`, `mtaSts`, `bimi`) each with a `findings` array, plus a top-level `summary` and a rolled-up `findings` list. Severities flag spoofing-enabling misconfigs (missing SPF/DMARC, `p=none`, `+all`, etc.).
+
+---
+
+## ip.intel
+
+ASN / IP intelligence via Team Cymru's keyless DNS service: ASN, BGP prefix, country, registry, allocation date, and hosting/CDN classification. Abuse reputation (AbuseIPDB) is an **optional, key-gated** enrichment — it runs only when `ABUSEIPDB_API_KEY` (env) or `opts.apiKey` is supplied, and is otherwise skipped with a note.
+
+**Playbook key:** `ip.intel`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `ip` | string | resolved from target | Explicit IP to analyse instead of resolving the target |
+| `apiKey` | string | `ABUSEIPDB_API_KEY` env | Enables AbuseIPDB reputation (optional) |
+
+```yaml
+- name: IP Intelligence
+  uses: ip.intel
+  with:
+    ip: "104.26.14.170"
+```
+
+**Returns:**
+
+```json
+{
+  "target": "cloudflare.com",
+  "ip": "104.16.132.229",
+  "asn": { "asn": "13335", "bgpPrefix": "104.16.128.0/20", "country": "US", "asName": "CLOUDFLARENET, US" },
+  "hosting": { "provider": "Cloudflare", "type": "cdn" },
+  "reputation": { "checked": false, "note": "Skipped — set ABUSEIPDB_API_KEY to enable abuse-reputation scoring." }
+}
+```
+
+---
+
+## http.security_score
+
+Scores the security-relevant response headers and assigns an A–F letter grade with per-header presence, value, and remediation advice. Also flags version-banner info leaks (`Server`, `X-Powered-By`).
+
+**Playbook key:** `http.security_score`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `path` | string | `/` | URL path |
+| `scheme` | string | `https` | `http` or `https` |
+| `timeoutMs` | number | `10000` | Request timeout |
+
+Headers evaluated (weighted): `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener/Resource/Embedder-Policy`.
+
+```yaml
+- name: Security Header Score
+  uses: http.security_score
+  with:
+    path: "/"
+```
+
+**Returns:** `{ grade, score, earned, maxScore, presentCount, missing, infoLeaks, details }`.
+
+---
+
+## http.waf_detect
+
+Detects WAF / CDN presence from response headers, cookies, and server banners.
+
+**Playbook key:** `http.waf_detect`
+
+Detects: Cloudflare, AWS WAF/CloudFront, Akamai, Imperva/Incapsula, Sucuri, F5 BIG-IP, Fastly, Varnish, Azure Front Door, Barracuda, Wordfence.
+
+```yaml
+- name: WAF Detection
+  uses: http.waf_detect
+```
+
+**Returns:** `{ url, status, wafDetected, detected: [{ name, type, evidence }], server }`.
+
+---
+
+## http.fingerprint
+
+Identifies the technology stack from response headers and (in deep mode) HTML body markers — server, language, framework, CMS, analytics, and JS libraries.
+
+**Playbook key:** `http.fingerprint`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `path` | string | `/` | URL path |
+| `scheme` | string | `https` | `http` or `https` |
+| `deep` | boolean | `true` | Also inspect the HTML body for client-side markers |
+| `timeoutMs` | number | `10000` | Request timeout |
+
+```yaml
+- name: Tech Fingerprint
+  uses: http.fingerprint
+  with:
+    path: "/"
+    deep: true
+```
+
+**Returns:** `{ url, status, server, poweredBy, technologies: [{ category, name, source, evidence }] }`.
+
+---
+
+## tls.deep
+
+Vulnerability-oriented TLS analysis — extends `tls.inspect` with a protocol support matrix (flags deprecated TLS 1.0/1.1), weak-cipher probes (RC4/3DES/NULL), certificate chain validation, OCSP stapling, and HSTS/preload status. Keyless.
+
+**Playbook key:** `tls.deep`
+
+| Option | Type | Default | Description |
+| -------- | ------ | --------- | ------------- |
+| `port` | number | `443` | TLS port |
+| `timeoutMs` | number | `10000` | Per-probe timeout |
+
+```yaml
+- name: Deep TLS Analysis
+  uses: tls.deep
+  with:
+    port: 443
+```
+
+**Returns:** `{ protocols, weakCiphers, chain, ocspStapling, hsts, findings }`.
+
+> **Note:** weak-cipher and legacy-protocol detection depends on the local OpenSSL build. A server that *only* speaks fully-removed algorithms (e.g. raw RC4-MD5) may be unreachable from a modern OpenSSL 3 client; this is reported distinctly as "could not complete a TLS handshake" rather than a false negative.
