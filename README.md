@@ -20,6 +20,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | ----- | ---------------- |
 | [Installation](docs/installation.md) | Prerequisites, platform-specific setup, dependency install |
 | [Getting Started](docs/getting-started.md) | First recon in under 5 minutes, output explained |
+| [User Guide](docs/user-guide.md) | Scenario-driven walkthrough of every use case |
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
 | [MCP Integration](docs/mcp-integration.md) | MCP server setup, Claude Desktop config, interactive flow |
 | [Playbooks](docs/playbooks.md) | Available playbooks, format reference, variable templating |

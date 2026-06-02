@@ -36,7 +36,7 @@ URL builder, and signatures, so it lives in one extension even though some
 executors are `scanning` and some are `gaining-access`). Phase/posture are facets
 computed from metadata, surfaced as views in the MCP tool list and reports.
 
-```
+```TREE
 extensions/
   <domain>/
     index.js          # default-exports the Extension Descriptor (the "manifest")

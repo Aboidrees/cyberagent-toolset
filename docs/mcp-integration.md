@@ -69,7 +69,7 @@ Claude will call `cats_topics` and show you the 7 playbooks with descriptions.
 Once connected, the typical flow looks like this:
 
 ```TEXT
-You:    "Run recon on fortmind.qa"
+You:    "Run recon on example.com"
 
 Claude: calls cats_topics → gets list of playbooks
 
@@ -84,7 +84,7 @@ Claude: "Which topics do you want to run?
 You:    "Quick Web Recon and Web Security Recon"
 
 Claude: calls cats_run_multi {
-          target: "fortmind.qa",
+          target: "example.com",
           playbooks: ["quick-web-recon", "web-security-recon"]
         }
 
