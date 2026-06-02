@@ -88,7 +88,7 @@ When a planned executor ships, flip its box to ✅ here and mirror it in CyberAg
 
 ## Phase 1 — Deeper intelligence  *(next)*
 
-### New executors
+### New executors for phase 1
 
 #### Email security analyser
 
@@ -198,7 +198,7 @@ Identifies the technology stack from HTTP headers and body patterns — framewor
 > sub-section (executive summary, risk matrix, severity-classified findings in the
 > Markdown report) shipped in v0.6.0 alongside Phase 3.
 
-### New executors
+### New executors for phase 2
 
 #### CVE lookup
 
@@ -312,8 +312,8 @@ steps:
 Integration with the Claude Desktop scheduled tasks system — run a playbook against a target on a cron schedule and get notified when new findings appear.
 
 ```bash
-# Run quick-web-recon on cyberany.org every Monday at 08:00
-npm run schedule -- --playbook quick-web-recon --target cyberany.org --cron "0 8 * * 1"
+# Run quick-web-recon on fortmind.qa every Monday at 08:00
+npm run schedule -- --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"
 ```
 
 ### Diff reports
@@ -331,9 +331,9 @@ Define a list of targets and playbooks in a YAML file and run the full batch in 
 ```yaml
 # watchlist.yml
 targets:
-  - host: cyberany.org
+  - host: fortmind.qa
     playbooks: [quick-web-recon, web-security-recon]
-  - host: api.cyberany.org
+  - host: api.fortmind.qa
     playbooks: [api-cloud-recon]
 ```
 
@@ -418,4 +418,4 @@ If you want to work on a roadmap item or propose a new one:
 
 1. Open an issue or pull request on GitHub.
 2. For new executors: follow the pattern in [Creating Playbooks](creating-playbooks.md#adding-a-custom-executor).
-3. For new playbooks: drop a `.md` file in `playbooks/` — they auto-register with zero code changes.
+3. For new playbooks: drop a `.yaml` file in `playbooks/` — they auto-register with zero code changes.

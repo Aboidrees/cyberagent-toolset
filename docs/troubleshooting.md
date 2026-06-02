@@ -52,7 +52,7 @@ Error: Step Name timed out after 10000ms
 
 ```bash
 # Global CLI flag
-node src/index.js -p playbooks/web-basic-recon.md --target example.com --timeout 30000
+node src/index.js -p playbooks/web-basic-recon.yaml --target example.com --timeout 30000
 ```
 
 ---
@@ -202,7 +202,7 @@ flags: "-sT -Pn -p 80,443,8080,8443"
 
 ```bash
 for target in app.example.com api.example.com admin.example.com; do
-  node src/index.js -p playbooks/quick-web-recon.md --target "$target"
+  node src/index.js -p playbooks/quick-web-recon.yaml --target "$target"
 done
 ```
 

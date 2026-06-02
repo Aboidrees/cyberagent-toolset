@@ -1,0 +1,26 @@
+# TLS Deep Assessment
+# Vulnerability-oriented TLS analysis — protocol support, weak ciphers, chain validation, OCSP, and HSTS.
+
+id: tls-deep-assessment
+title: TLS Deep Assessment
+description: Vulnerability-oriented TLS analysis — protocol support, weak ciphers, chain validation, OCSP, and HSTS.
+vars:
+  target: example.com
+  port: 443
+steps:
+  - name: Certificate Overview
+    uses: tls.inspect
+    with:
+      port: "{{vars.port}}"
+      timeoutMs: 12000
+  - name: Deep TLS Analysis
+    uses: tls.deep
+    with:
+      port: "{{vars.port}}"
+      timeoutMs: 10000
+  - name: HSTS Header (HTTP layer)
+    uses: http.headers
+    with:
+      path: /
+      scheme: https
+      timeoutMs: 10000

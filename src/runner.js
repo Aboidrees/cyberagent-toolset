@@ -91,9 +91,17 @@ function withTimeout(promise, ms, label = 'operation') {
 }
 
 export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, stepTimeoutMs }) {
-  // Load playbook and parse YAML front matter
+  // Load playbook. `.yaml`/`.yml` are pure YAML; `.md` is YAML front matter +
+  // Markdown body (legacy). The body, when present, is exposed to templates.
   const raw = await fs.readFile(playbookPath, 'utf8');
-  const { data: fm, content } = matter(raw, { engines: { yaml: s => yaml.load(s) } });
+  let fm, content = '';
+  if (playbookPath.endsWith('.yaml') || playbookPath.endsWith('.yml')) {
+    fm = yaml.load(raw) || {};
+  } else {
+    const parsed = matter(raw, { engines: { yaml: s => yaml.load(s) } });
+    fm = parsed.data;
+    content = parsed.content;
+  }
 
   const ctx = { vars: { ...(fm.vars || {}), ...varOverrides } };
   const steps = fm.steps || [];

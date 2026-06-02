@@ -16,7 +16,7 @@ import { ensureDir } from './utils/fsx.js';
  *   schedule  — run a playbook on a cron schedule (long-running)
  *   report    — export a run JSON to PDF / DOCX / HTML
  *
- * Backwards compatible: `node src/index.js -p playbook.md --target host` still
+ * Backwards compatible: `node src/index.js -p playbook.yaml --target host` still
  * works (it is the default command).
  */
 
@@ -48,12 +48,12 @@ await yargs(hideBin(process.argv))
     ['run', '$0'],
     'Run a playbook against a target',
     y => y
-      .option('p', { alias: 'playbook', type: 'string', demandOption: true, describe: 'Path to playbook .md file' })
+      .option('p', { alias: 'playbook', type: 'string', demandOption: true, describe: 'Path to playbook .yaml (or legacy .md) file' })
       .option('target', { alias: 't', type: 'string', describe: 'Recon target (shorthand for --var target=<value>)' })
       .option('var', { type: 'array', describe: 'Override playbook vars, e.g. --var scheme=http' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
-      .example('$0 -p playbooks/quick-web-recon.md --target cyberany.org', 'Run a playbook'),
+      .example('$0 -p playbooks/quick-web-recon.yaml --target fortmind.qa', 'Run a playbook'),
     wrap(async argv => {
       await ensureDir(argv.out);
       const r = await runPlaybook({
@@ -95,7 +95,7 @@ await yargs(hideBin(process.argv))
     'watch',
     'Run a watchlist of targets and playbooks from a YAML file',
     y => y
-      .option('list', { type: 'string', demandOption: true, describe: 'Path to watchlist.yml' })
+      .option('list', { type: 'string', demandOption: true, describe: 'Path to a watchlist YAML (e.g. watchlists/example.yaml)' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' }),
     wrap(async argv => {
@@ -117,13 +117,13 @@ await yargs(hideBin(process.argv))
     'schedule',
     'Run a playbook against a target on a cron schedule (stays running)',
     y => y
-      .option('playbook', { type: 'string', demandOption: true, describe: 'Playbook id or .md path' })
+      .option('playbook', { type: 'string', demandOption: true, describe: 'Playbook id or .yaml path' })
       .option('target', { type: 'string', demandOption: true, describe: 'Target host/IP' })
       .option('cron', { type: 'string', demandOption: true, describe: 'Cron expression, e.g. "0 8 * * 1"' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('now', { type: 'boolean', default: false, describe: 'Run once immediately, then on schedule' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
-      .example('$0 schedule --playbook quick-web-recon --target cyberany.org --cron "0 8 * * 1"', 'Every Monday 08:00'),
+      .example('$0 schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"', 'Every Monday 08:00'),
     wrap(async argv => {
       await scheduleScan({
         playbook: argv.playbook,

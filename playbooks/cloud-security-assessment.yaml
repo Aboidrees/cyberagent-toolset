@@ -1,0 +1,68 @@
+# Cloud Security Assessment
+# Cloud-hosted exposure assessment — hosting provider, public storage buckets, and edge (CDN/WAF/TLS) configuration.
+# ⚠ Includes active steps (path fuzzing, bucket probing). Authorized targets only.
+
+id: cloud-security-assessment
+title: Cloud Security Assessment
+description: >-
+  Cloud-hosted exposure assessment — hosting provider, public storage buckets, and edge (CDN/WAF/TLS)
+  configuration.
+vars:
+  target: example.com
+  scheme: https
+  timeout: 10000
+steps:
+  - name: IP / ASN Intelligence
+    uses: ip.intel
+  - name: DNS Records (CNAME reveals cloud/CDN)
+    uses: dns.resolve
+    with:
+      types: [A, AAAA, CNAME, NS, MX, TXT]
+      timeoutMs: 8000
+  - name: WAF / CDN Fingerprint
+    uses: http.waf_detect
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: Cloud Bucket Discovery
+    uses: cloud.bucket_finder
+    with:
+      timeoutMs: 30000
+  - name: Passive Subdomains (crt.sh)
+    uses: subdomains.passive
+    with:
+      sources: [crtsh]
+      timeoutMs: 25000
+  - name: Shodan Host Data
+    uses: shodan.host
+    with:
+      timeoutMs: 15000
+  - name: Deep TLS Analysis
+    uses: tls.deep
+    with:
+      port: 443
+      timeoutMs: 10000
+  - name: Security Header Score
+    uses: http.security_score
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: Technology Fingerprint
+    uses: http.fingerprint
+    with:
+      path: /
+      deep: true
+      timeoutMs: "{{vars.timeout}}"
+  - name: Cloud Config Exposure (.env / .git)
+    uses: http.git_leak
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: API Surface Discovery
+    uses: http.fuzz_paths
+    with:
+      wordlist: api
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 20000

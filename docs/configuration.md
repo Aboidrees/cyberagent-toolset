@@ -15,10 +15,10 @@
 
 ```bash
 # Minimal — target via --target flag
-node src/index.js -p playbooks/quick-web-recon.md --target example.com
+node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
 
 # Full control
-node src/index.js -p playbooks/web-basic-recon.md \
+node src/index.js -p playbooks/web-basic-recon.yaml \
   --target example.com \
   --var scheme=http \
   --var topPorts=500 \
@@ -26,7 +26,7 @@ node src/index.js -p playbooks/web-basic-recon.md \
   --out ./results/2026-04
 
 # Multiple --var overrides
-node src/index.js -p playbooks/comprehensive-web-recon.md \
+node src/index.js -p playbooks/comprehensive-web-recon.yaml \
   --var target=api.example.com \
   --var scheme=https \
   --var deepScan=true
@@ -59,7 +59,7 @@ Reports are saved to `./runs/` by default. The directory is created automaticall
 
 ```bash
 # Save to a custom directory
-node src/index.js -p playbooks/quick-web-recon.md --target example.com --out ./reports/q1
+node src/index.js -p playbooks/quick-web-recon.yaml --target example.com --out ./reports/q1
 ```
 
 Filenames are timestamped:
@@ -104,16 +104,16 @@ Beyond the default `run` command, the CLI exposes scale-and-automation commands:
 
 ```bash
 # Run a playbook (default command — the bare form still works)
-node src/index.js -p playbooks/quick-web-recon.md --target cyberany.org
+node src/index.js -p playbooks/quick-web-recon.yaml --target fortmind.qa
 
 # Diff two runs — exits non-zero when something changed (handy for monitoring)
 node src/index.js diff runs/old.json runs/new.json [--out diff.md]
 
 # Run a batch of targets + playbooks from a YAML watchlist
-node src/index.js watch --list watchlist.yml [--out ./runs]
+node src/index.js watch --list watchlists/example.yaml [--out ./runs]
 
 # Run a playbook on a cron schedule (long-running; new findings fire webhooks)
-node src/index.js schedule --playbook quick-web-recon --target cyberany.org \
+node src/index.js schedule --playbook quick-web-recon --target fortmind.qa \
   --cron "0 8 * * 1" [--now]
 
 # Export a run to a professional report
@@ -146,7 +146,7 @@ steps:
 
 The MCP server has no separate config file. It reads playbooks dynamically from `playbooks/` at startup. To change behaviour:
 
-- **Add/remove playbooks** — drop or delete `.md` files in `playbooks/`, restart the server
+- **Add/remove playbooks** — drop or delete `.yaml` files in `playbooks/`, restart the server
 - **Change the runs directory** — edit the `RUNS_DIR` constant at the top of `src/mcp-server.js`
 - **Change the playbooks directory** — edit `PLAYBOOKS_DIR` in `src/utils/playbooks.js`
 

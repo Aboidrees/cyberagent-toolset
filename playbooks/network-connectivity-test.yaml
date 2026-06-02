@@ -1,0 +1,19 @@
+# Network Connectivity Test
+# Network diagnostics — ICMP ping statistics and hop-by-hop traceroute path.
+
+id: network-connectivity-test
+title: Network Connectivity Test
+description: Network diagnostics — ICMP ping statistics and hop-by-hop traceroute path.
+vars:
+  target: google.com
+steps:
+  - name: Ping Test
+    uses: network.ping
+    with:
+      count: 4
+      timeoutMs: 10000
+  - name: Traceroute
+    uses: network.traceroute
+    with:
+      maxHops: 20
+      timeoutMs: 45000

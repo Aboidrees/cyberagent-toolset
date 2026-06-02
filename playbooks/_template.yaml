@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Playbook template / skeleton
+#
+# Copy this file to playbooks/<your-id>.yaml and edit. Files starting with "_"
+# are templates and are NOT loaded as playbooks. Each playbook is pure YAML with
+# three required top-level keys (id, title, description) plus optional `vars` and
+# a list of `steps`. Drop a finished file in playbooks/ and it auto-registers as
+# an MCP tool — no code changes needed.
+#
+# Full per-executor options & return shapes:  docs/executors.md
+# Authoring guide & patterns:                  docs/creating-playbooks.md
+# ─────────────────────────────────────────────────────────────────────────────
+
+id: my-recon                 # required — unique id, used as the MCP tool name
+title: My Recon              # required — human-readable label
+description: One-line summary of what this playbook does (shown as the tool description).
+
+# Default variables. Override at run time with --target or --var key=value.
+# Reference anywhere with {{vars.name}} (a whole-string numeric template is
+# coerced back to a number).
+vars:
+  target: example.com
+  scheme: https
+  timeout: 10000
+
+steps:
+  # Each step names an executor via `uses:` and passes options under `with:`.
+  # `timeoutMs` is the per-step timeout. Add `parallel: true` to run consecutive
+  # steps concurrently (a non-parallel step is a barrier).
+  - name: DNS Records
+    uses: dns.resolve
+    with:
+      types: [A, AAAA, NS, MX, TXT]
+      timeoutMs: 5000
+
+  - name: Security Header Score
+    uses: http.security_score
+    with:
+      path: "/"
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+
+# ── Available executors (uses:) by stage — see docs/executors.md for options ──
+#
+# PASSIVE / OSINT (no host contact):
+#   dns.resolve · dns.reverse · whois.lookup · subdomains.passive ·
+#   email.security · ip.intel
+# LIVENESS (light probes):
+#   network.ping · network.traceroute
+# PORTSCAN (active):
+#   nmap.scan
+# WEBSCANNER (active HTTP/TLS):
+#   http.headers · http.get · http.security_score · http.waf_detect ·
+#   http.fingerprint · http.cors_check · http.methods · tls.inspect · tls.deep
+# VULNERABILITY INTELLIGENCE (vuln databases, no host contact):
+#   vuln.cve_lookup · shodan.host (key-gated)
+# ESCALATION (targeted active probes — authorized targets only):
+#   cloud.bucket_finder · http.fuzz_paths · http.git_leak

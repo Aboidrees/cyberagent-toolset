@@ -1,439 +1,320 @@
----
+# Web Application Security Reconnaissance
+# Security-focused assessment — exposed files, admin panels, framework leaks, and information disclosure.
+# ⚠ For authorized security testing only. Ensure you have explicit permission to test the target.
+
 id: web-security-recon
 title: Web Application Security Reconnaissance
+description: Security-focused assessment — exposed files, admin panels, framework leaks, and information disclosure.
 vars:
-  target: "example.com"
-  scheme: "https"
+  target: example.com
+  scheme: https
   timeout: 10000
-  userAgent: "Mozilla/5.0 (compatible; SecurityBot/1.0)"
+  userAgent: Mozilla/5.0 (compatible; SecurityBot/1.0)
 steps:
-  # Basic Security Headers Analysis
   - name: Security Headers Check
     uses: http.headers
     with:
-      path: "/"
+      path: /
       scheme: "{{vars.scheme}}"
-      headers:
-        User-Agent: "{{vars.userAgent}}"
+      headers: {User-Agent: "{{vars.userAgent}}"}
       timeoutMs: "{{vars.timeout}}"
-
-  # SSL/TLS Security Analysis
   - name: TLS Configuration Analysis
     uses: tls.inspect
     with:
       port: 443
       timeoutMs: 15000
-
-  # Common Vulnerability Paths
   - name: .well-known/security.txt
     uses: http.get
     with:
-      path: "/.well-known/security.txt"
+      path: /.well-known/security.txt
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-  
   - name: Exposed .env Files
     uses: http.get
     with:
-      path: "/.env"
+      path: /.env
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Exposed .git Directory
     uses: http.get
     with:
-      path: "/.git/"
+      path: /.git/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Exposed .git/config
     uses: http.get
     with:
-      path: "/.git/config"
+      path: /.git/config
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Exposed Docker Files
     uses: http.get
     with:
-      path: "/Dockerfile"
+      path: /Dockerfile
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Exposed .dockerignore
     uses: http.get
     with:
-      path: "/.dockerignore"
+      path: /.dockerignore
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Configuration Files
   - name: Web.config Exposure
     uses: http.get
     with:
-      path: "/web.config"
+      path: /web.config
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: .htaccess Exposure
     uses: http.get
     with:
-      path: "/.htaccess"
+      path: /.htaccess
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: phpinfo() Exposure
     uses: http.get
     with:
-      path: "/phpinfo.php"
+      path: /phpinfo.php
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Backup Files
   - name: Database Backup Files
     uses: http.get
     with:
-      path: "/backup.sql"
+      path: /backup.sql
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Site Backup Files
     uses: http.get
     with:
-      path: "/backup.zip"
+      path: /backup.zip
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Old Site Backup
     uses: http.get
     with:
-      path: "/old/"
+      path: /old/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Admin/Management Interfaces
   - name: Admin Interface
     uses: http.get
     with:
-      path: "/admin/"
+      path: /admin/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Management Interface
     uses: http.get
     with:
-      path: "/manage/"
+      path: /manage/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Control Panel
     uses: http.get
     with:
-      path: "/cpanel/"
+      path: /cpanel/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: PHPMyAdmin
     uses: http.get
     with:
-      path: "/phpmyadmin/"
+      path: /phpmyadmin/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # API Security Check
   - name: API Documentation
     uses: http.get
     with:
-      path: "/api/docs"
+      path: /api/docs
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Swagger UI
     uses: http.get
     with:
-      path: "/swagger-ui/"
+      path: /swagger-ui/
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: GraphQL Introspection
     uses: http.get
     with:
-      path: "/graphql"
+      path: /graphql
       scheme: "{{vars.scheme}}"
-      headers:
-        Content-Type: "application/json"
+      headers: {Content-Type: application/json}
       timeoutMs: "{{vars.timeout}}"
-
-  # Server Information Disclosure
   - name: Server Status
     uses: http.get
     with:
-      path: "/server-status"
+      path: /server-status
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Server Info
     uses: http.get
     with:
-      path: "/server-info"
+      path: /server-info
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Technology-Specific Checks
   - name: WordPress wp-config Backup
     uses: http.get
     with:
-      path: "/wp-config.php.bak"
+      path: /wp-config.php.bak
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: WordPress Debug Log
     uses: http.get
     with:
-      path: "/wp-content/debug.log"
+      path: /wp-content/debug.log
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Laravel .env
     uses: http.get
     with:
-      path: "/.env"
+      path: /.env
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Django Settings
     uses: http.get
     with:
-      path: "/settings.py"
+      path: /settings.py
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Log Files
   - name: Error Logs
     uses: http.get
     with:
-      path: "/error.log"
+      path: /error.log
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Access Logs
     uses: http.get
     with:
-      path: "/access.log"
+      path: /access.log
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Development Artifacts
   - name: Source Maps
     uses: http.get
     with:
-      path: "/main.js.map"
+      path: /main.js.map
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Package.json
     uses: http.get
     with:
-      path: "/package.json"
+      path: /package.json
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Composer.json
     uses: http.get
     with:
-      path: "/composer.json"
+      path: /composer.json
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Additional VCS exposure (beyond .git)
   - name: Exposed .svn/entries
     uses: http.get
     with:
-      path: "/.svn/entries"
+      path: /.svn/entries
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Exposed .hg (Mercurial)
     uses: http.get
     with:
-      path: "/.hg/store/00manifest.i"
+      path: /.hg/store/00manifest.i
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Exposed .bzr (Bazaar)
     uses: http.get
     with:
-      path: "/.bzr/branch/branch.conf"
+      path: /.bzr/branch/branch.conf
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Cloud / package credential leaks
   - name: AWS Credentials
     uses: http.get
     with:
-      path: "/.aws/credentials"
+      path: /.aws/credentials
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: NPM Token (.npmrc)
     uses: http.get
     with:
-      path: "/.npmrc"
+      path: /.npmrc
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: PyPI Token (.pypirc)
     uses: http.get
     with:
-      path: "/.pypirc"
+      path: /.pypirc
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Environment file variants
   - name: .env.local
     uses: http.get
     with:
-      path: "/.env.local"
+      path: /.env.local
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: .env.production
     uses: http.get
     with:
-      path: "/.env.production"
+      path: /.env.production
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: .env.backup
     uses: http.get
     with:
-      path: "/.env.backup"
+      path: /.env.backup
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # CI / build manifests
   - name: docker-compose.yml
     uses: http.get
     with:
-      path: "/docker-compose.yml"
+      path: /docker-compose.yml
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: GitLab CI Config
     uses: http.get
     with:
-      path: "/.gitlab-ci.yml"
+      path: /.gitlab-ci.yml
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: GitHub Actions Workflow
     uses: http.get
     with:
-      path: "/.github/workflows/main.yml"
+      path: /.github/workflows/main.yml
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Spring Boot Actuator exposure
   - name: Actuator Health
     uses: http.get
     with:
-      path: "/actuator/health"
+      path: /actuator/health
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: Actuator Env (secrets)
     uses: http.get
     with:
-      path: "/actuator/env"
+      path: /actuator/env
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # IDE / editor artifacts
   - name: VS Code settings
     uses: http.get
     with:
-      path: "/.vscode/settings.json"
+      path: /.vscode/settings.json
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: JetBrains .idea
     uses: http.get
     with:
-      path: "/.idea/workspace.xml"
+      path: /.idea/workspace.xml
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: macOS .DS_Store
     uses: http.get
     with:
-      path: "/.DS_Store"
+      path: /.DS_Store
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
-  # Legacy cross-domain / ASP.NET trace
   - name: crossdomain.xml
     uses: http.get
     with:
-      path: "/crossdomain.xml"
+      path: /crossdomain.xml
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
-
   - name: ASP.NET Trace (trace.axd)
     uses: http.get
     with:
-      path: "/trace.axd"
+      path: /trace.axd
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
----
-
-## Web Application Security Reconnaissance for {{vars.target}}
-
-This specialized security-focused playbook identifies potential security vulnerabilities and information disclosure issues including:
-
-### Security Headers Analysis
-
-- HTTP security headers evaluation
-- TLS/SSL configuration assessment
-
-### Information Disclosure Detection
-
-- Exposed configuration files (.env and variants, web.config, .htaccess)
-- Source code exposure across VCS (.git, .svn, .hg, .bzr) and backup files
-- Cloud/package credential leaks (.aws/credentials, .npmrc, .pypirc)
-- CI/build manifests (docker-compose.yml, .gitlab-ci.yml, GitHub Actions)
-- Spring Boot Actuator exposure (/actuator/health, /actuator/env)
-- IDE/editor artifacts (.vscode, .idea, .DS_Store)
-- Development artifacts (source maps, package files)
-
-### Administrative Interface Discovery
-
-- Admin panels and management interfaces
-- Database administration tools
-- Control panels
-
-### API Security Assessment
-
-- API documentation exposure
-- GraphQL introspection
-- Swagger/OpenAPI endpoints
-
-### Technology-Specific Vulnerabilities
-
-- WordPress configuration exposure
-- Laravel environment files
-- Django settings disclosure
-
-### Server Information Leakage
-
-- Server status pages
-- Error and access logs
-- Debug information
-
-⚠️ **IMPORTANT SECURITY NOTICE**
-This playbook is designed for authorized security testing only. Ensure you have explicit permission to test the target system. Unauthorized scanning may violate laws and policies.
-
-### Usage
-
-```bash
-node ./src/index.js -p ./playbooks/web-security-recon.md --var target=authorized-target.com
-```

@@ -35,6 +35,12 @@ multi-command (`run` · `diff` · `watch` · `schedule` · `report`).
 
 - CLI restructured into subcommands; the bare `-p <playbook> --target <host>` form
   is preserved as the default command.
+- **Playbooks are now `.yaml` files** (pure YAML with id/title/description) instead
+  of `.md`. Legacy `.md` still loads for backward compatibility; `playbooks/_template.yaml`
+  is the new skeleton.
+- Watchlists live in a `watchlists/` folder, with `watchlists/example.yaml` provided.
+- `.env.example` documents every supported key (Slack/webhook, AbuseIPDB, Shodan,
+  NVD, SecurityTrails) with how-to-get links and free/paid status.
 - Added dependencies: `node-cron`, `pdfkit`, `docx`.
 - Version bumped 0.5.0 → 0.6.0.
 

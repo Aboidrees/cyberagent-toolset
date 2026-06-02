@@ -69,7 +69,7 @@ Claude will call `recon_topics` and show you the 7 playbooks with descriptions.
 Once connected, the typical flow looks like this:
 
 ```TEXT
-You:    "Run recon on cyberany.org"
+You:    "Run recon on fortmind.qa"
 
 Claude: calls recon_topics → gets list of playbooks
 
@@ -84,7 +84,7 @@ Claude: "Which topics do you want to run?
 You:    "Quick Web Recon and Web Security Recon"
 
 Claude: calls recon_run_multi {
-          target: "cyberany.org",
+          target: "fortmind.qa",
           playbooks: ["quick-web-recon", "web-security-recon"]
         }
 
@@ -127,8 +127,8 @@ Claude: presents findings, highlights issues
 
 ## Adding a new playbook
 
-1. Drop a `.md` file into `playbooks/` following the [playbook format](playbooks.md).
-2. Make sure it has an `id` and `title` in the YAML front matter.
+1. Drop a `.yaml` file into `playbooks/` following the [playbook format](playbooks.md).
+2. Make sure it has an `id`, `title`, and `description`.
 3. Restart Claude Desktop.
 
 The new playbook automatically appears as a tool (`recon_play__<id>`) and in the `recon_topics` list — no code changes needed.

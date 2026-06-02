@@ -8,7 +8,7 @@
 
 ## What it does
 
-MCP Recon Runner orchestrates reconnaissance workflows defined in Markdown playbooks. Point it at a target, pick one or more topic-based playbooks, and it runs every check — DNS, WHOIS, port scan, HTTP headers, TLS, subdomain enumeration, and more — then saves structured JSON + Markdown reports.
+MCP Recon Runner orchestrates reconnaissance workflows defined in YAML playbooks. Point it at a target, pick one or more topic-based playbooks, and it runs every check — DNS, WHOIS, port scan, HTTP headers, TLS, subdomain enumeration, and more — then saves structured JSON + Markdown reports (and optional PDF/DOCX).
 
 When the MCP server is running, Claude can drive the entire workflow interactively: list available topics, ask which ones you want, run the selected playbooks, and present findings — all in natural language.
 
@@ -39,7 +39,7 @@ cd mcp-recon-runner
 npm install
 
 # 2. Run a quick recon
-node src/index.js -p playbooks/quick-web-recon.md --target example.com
+node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
 
 # 3. Or start the MCP server for Claude
 npm run mcp
@@ -56,10 +56,10 @@ Reports are saved to `runs/` as `.json` and `.md`.
 node src/index.js diff runs/old.json runs/new.json
 
 # Batch-run a watchlist of targets + playbooks
-node src/index.js watch --list watchlist.yml
+node src/index.js watch --list watchlists/example.yaml
 
 # Schedule a recurring scan (new findings fire webhooks)
-node src/index.js schedule --playbook quick-web-recon --target cyberany.org --cron "0 8 * * 1"
+node src/index.js schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"
 
 # Export a run to PDF / DOCX / HTML
 node src/index.js report runs/run.json --format pdf --out report.pdf
@@ -124,7 +124,7 @@ mcp-recon-runner/
 │       ├── os.js             # OS detection + command availability
 │       ├── playbooks.js      # Dynamic playbook loader
 │       └── validate.js       # Input validation (injection prevention)
-├── playbooks/                # Recon playbooks (drop .md here to add tools)
+├── playbooks/                # Recon playbooks (drop .yaml here to add tools)
 ├── docs/                     # Full documentation
 └── runs/                     # Auto-generated reports (gitignored)
 ```
