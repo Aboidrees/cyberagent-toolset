@@ -1,0 +1,59 @@
+import cron from 'node-cron';
+import path from 'path';
+import { runPlaybook } from './runner.js';
+import { loadPlaybooks } from './utils/playbooks.js';
+import { ensureDir } from './utils/fsx.js';
+
+/**
+ * Scheduled scanning — run a playbook against a target on a cron schedule.
+ *
+ * Starts a long-running process that fires the playbook on each cron tick. New
+ * findings flow through the normal report + webhook-notification path, so
+ * configuring SLACK_WEBHOOK_URL / WEBHOOK_URL turns this into a monitoring loop.
+ *
+ * Resolves the playbook by id (from playbooks/) or by direct .md file path.
+ */
+export async function scheduleScan({ playbook, target, cronExpr, outDir, stepTimeoutMs, runImmediately = false, log = console.error }) {
+  if (!cron.validate(cronExpr)) {
+    throw new Error(`Invalid cron expression: "${cronExpr}"`);
+  }
+
+  // Resolve the playbook file: a path ending in .md is used directly, otherwise
+  // it is looked up by id.
+  let playbookPath;
+  if (playbook.endsWith('.md')) {
+    playbookPath = path.resolve(playbook);
+  } else {
+    const all = await loadPlaybooks();
+    const pb = all.find(p => p.id === playbook);
+    if (!pb) {
+      throw new Error(`Playbook "${playbook}" not found. Available: ${all.map(p => p.id).join(', ')}`);
+    }
+    playbookPath = pb.file;
+  }
+
+  await ensureDir(outDir);
+
+  let runCount = 0;
+  const runOnce = async () => {
+    runCount += 1;
+    const stamp = new Date().toISOString();
+    log(`[schedule] run #${runCount} starting at ${stamp} — ${playbook} → ${target}`);
+    try {
+      const r = await runPlaybook({ playbookPath, outDir, varOverrides: { target }, stepTimeoutMs });
+      const top = r.report.topSeverity || 'none';
+      log(`[schedule] run #${runCount} done — top severity: ${top}, report: ${r.jsonPath}`);
+      return r;
+    } catch (e) {
+      log(`[schedule] run #${runCount} failed: ${e.message}`);
+      return null;
+    }
+  };
+
+  const task = cron.schedule(cronExpr, runOnce);
+  log(`[schedule] scheduled "${playbook}" against ${target} on "${cronExpr}". Ctrl-C to stop.`);
+
+  if (runImmediately) await runOnce();
+
+  return { task, runOnce, get runCount() { return runCount; } };
+}
