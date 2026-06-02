@@ -1,12 +1,13 @@
 import { resolveDNS, reverseDNS } from './src/dns.js';
 import { passive } from './src/subdomains.js';
+import { dnssec, caa, bruteforce } from './src/advanced.js';
 
 /** DNS reconnaissance — records, reverse/PTR sweeps, passive subdomains. */
 export default {
   name: 'dns',
-  version: '1.0.0',
+  version: '1.1.0',
   domain: 'dns',
-  description: 'DNS reconnaissance — records, reverse/PTR sweeps, and passive subdomains.',
+  description: 'DNS reconnaissance — records, reverse/PTR sweeps, passive subdomains, DNSSEC, CAA, and subdomain brute-force.',
   permissions: { network: ['dns', 'https'], env: [], bins: [] },
   executors: [
     {
@@ -42,6 +43,37 @@ export default {
       run: passive,
       inputSchema: {
         target: { type: 'string', description: 'Base domain (e.g. "example.com")' },
+      },
+    },
+    {
+      uses: 'dns.dnssec',
+      phase: 'reconnaissance',
+      posture: 'passive',
+      targetTypes: ['domain'],
+      summary: 'DNSSEC posture (DNSKEY/DS + AD flag) via DNS-over-HTTPS.',
+      run: dnssec,
+      inputSchema: { target: { type: 'string', description: 'Domain' } },
+    },
+    {
+      uses: 'dns.caa',
+      phase: 'reconnaissance',
+      posture: 'passive',
+      targetTypes: ['domain'],
+      summary: 'CAA records — which CAs may issue certificates for the domain.',
+      run: caa,
+      inputSchema: { target: { type: 'string', description: 'Domain' } },
+    },
+    {
+      uses: 'subdomains.bruteforce',
+      phase: 'reconnaissance',
+      posture: 'active',
+      targetTypes: ['domain'],
+      summary: 'Active subdomain brute-force against a built-in wordlist.',
+      run: bruteforce,
+      inputSchema: {
+        target: { type: 'string', description: 'Base domain' },
+        wordlist: { type: 'array', items: { type: 'string' }, description: 'Custom subdomain list (optional)' },
+        concurrency: { type: 'number', description: 'Parallel lookups. Default: 20' },
       },
     },
   ],

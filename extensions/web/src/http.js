@@ -10,7 +10,7 @@ import { validateTarget } from '#sdk';
  * host override): scheme is whitelisted to http/https, and the path may not
  * contain credentials, whitespace, backslashes, or a protocol-relative prefix.
  */
-function buildUrl(scheme, host, urlPath = '/') {
+export function buildUrl(scheme, host, urlPath = '/') {
   const safeScheme = scheme === 'http' ? 'http' : 'https';
   const p = urlPath || '/';
   // eslint-disable-next-line no-control-regex
