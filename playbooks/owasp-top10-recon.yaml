@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
+# OWASP Top 10 Reconnaissance
+# Maps the recon phase of each OWASP Top 10 (2021) category to the executor that gathers the relevant signal.
+# ⚠ Includes active steps (path fuzzing). Authorized targets only.
+
+id: owasp-top10-recon
+title: OWASP Top 10 Reconnaissance
+description: Maps the recon phase of each OWASP Top 10 (2021) category to the executor that gathers the relevant signal.
+vars:
+  target: example.com
+  scheme: https
+  timeout: 10000
+steps:
+  - name: A01 Access Control — admin surface
+    uses: http.fuzz_paths
+    with:
+      wordlist: admin
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 20000
+  - name: A02 Cryptographic Failures — deep TLS
+    uses: tls.deep
+    with:
+      port: 443
+      timeoutMs: 10000
+  - name: A03 Injection — API surface
+    uses: http.fuzz_paths
+    with:
+      wordlist: api
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 20000
+  - name: A04 Insecure Design — tech fingerprint
+    uses: http.fingerprint
+    with:
+      path: /
+      deep: true
+      timeoutMs: "{{vars.timeout}}"
+  - name: A05 Misconfiguration — header score
+    uses: http.security_score
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: A05 Misconfiguration — common exposures
+    uses: http.fuzz_paths
+    with:
+      wordlist: common
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 20000
+  - name: A06 Vulnerable Components — CVE lookup
+    uses: vuln.cve_lookup
+    with:
+      keyword: "{{vars.target}}"
+      minCvss: 7
+      maxResults: 10
+  - name: A07 Auth Failures — login surface
+    uses: http.fuzz_paths
+    with:
+      wordlist: php
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 20000
+  - name: A08 Integrity Failures — git leak
+    uses: http.git_leak
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: A08 Integrity — email auth
+    uses: email.security
+    with:
+      timeoutMs: 20000
+  - name: A09 Logging & Monitoring — WAF/CDN
+    uses: http.waf_detect
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: A10 SSRF — IP / hosting intel
+    uses: ip.intel
+  - name: A10 SSRF — DNS records
+    uses: dns.resolve
+    with:
+      types: [A, AAAA, CNAME, NS, MX, TXT]
+      timeoutMs: 8000

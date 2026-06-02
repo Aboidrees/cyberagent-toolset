@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../schemas/watchlist.schema.json
+# ─────────────────────────────────────────────────────────────────────────────
+# Target watchlist
+#
+# Run with:  node src/index.js watch --list watchlists/example.yaml
+#
+# Each target lists the playbook ids to run against it. Playbook ids come from
+# the `id:` field of the files in playbooks/  (or run `node src/index.js --help`).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Optional vars applied to every run in this watchlist.
+vars:
+  scheme: https
+
+targets:
+  - host: fortmind.qa
+    playbooks:
+      - quick-web-recon
+      - web-headers-assessment
+
+  - host: api.fortmind.qa
+    playbooks:
+      - api-cloud-recon
+      - email-security-assessment
+    # Per-target var overrides are also supported:
+    # vars:
+    #   scheme: http

@@ -61,24 +61,36 @@ export async function loadPlaybooks() {
 
   const playbooks = [];
 
-  for (const file of files.filter(f => f.endsWith('.md') && !f.startsWith('_'))) {
+  // Playbooks are .yaml/.yml (pure YAML) or .md (YAML front matter + body, legacy).
+  // Files starting with "_" are templates/partials and are skipped.
+  const isPlaybook = f =>
+    !f.startsWith('_') && (f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.md'));
+
+  for (const file of files.filter(isPlaybook)) {
     const filepath = path.join(PLAYBOOKS_DIR, file);
     try {
       const raw = await fs.readFile(filepath, 'utf8');
-      const { data: fm, content } = matter(raw, {
-        engines: { yaml: s => yaml.load(s) },
-      });
+
+      let fm, content = '';
+      if (file.endsWith('.md')) {
+        const parsed = matter(raw, { engines: { yaml: s => yaml.load(s) } });
+        fm = parsed.data;
+        content = parsed.content;
+      } else {
+        fm = yaml.load(raw) || {};
+      }
 
       // Must have an id and title to be usable as an MCP tool
       if (!fm.id || !fm.title) continue;
 
-      // Extract description: first non-heading, non-empty line from body
+      // Description: explicit `description:` field wins; otherwise (for legacy .md)
+      // fall back to the first non-heading line of the body.
       const descLine = content
         .split('\n')
         .map(l => l.trim())
         .find(l => l.length > 0 && !l.startsWith('#') && !l.startsWith('```'));
 
-      const description = descLine || `Run ${fm.title} checks against a target.`;
+      const description = fm.description || descLine || `Run ${fm.title} checks against a target.`;
 
       const steps = (fm.steps || []);
       const executors = [...new Set(steps.map(s => s.uses).filter(Boolean))];

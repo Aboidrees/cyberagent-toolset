@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Aboidrees/mcp-recon-runner/schemas/watchlist.schema.json",
+  "title": "mcp-recon-runner watchlist",
+  "description": "A batch of targets, each with the playbook ids to run against it.",
+  "type": "object",
+  "required": ["targets"],
+  "additionalProperties": false,
+  "properties": {
+    "vars": {
+      "type": "object",
+      "description": "Optional vars applied to every run in this watchlist.",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      }
+    },
+    "targets": {
+      "type": "array",
+      "description": "Targets to scan.",
+      "items": {
+        "type": "object",
+        "required": ["host", "playbooks"],
+        "additionalProperties": false,
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "Hostname or IP to scan."
+          },
+          "playbooks": {
+            "type": "array",
+            "description": "Playbook ids to run against this host.",
+            "items": { "type": "string" }
+          },
+          "vars": {
+            "type": "object",
+            "description": "Per-target var overrides.",
+            "additionalProperties": {
+              "type": ["string", "number", "boolean"]
+            }
+          }
+        }
+      }
+    }
+  }
+}

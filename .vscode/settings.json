@@ -1,0 +1,7 @@
+{
+  "//": "Map our own JSON Schemas to playbook/watchlist YAML so the editor does NOT mis-detect them as Ansible playbooks (they live in a playbooks/ dir, which the Ansible schema in JSON Schema Store auto-matches).",
+  "yaml.schemas": {
+    "./schemas/playbook.schema.json": ["playbooks/*.yaml", "playbooks/*.yml"],
+    "./schemas/watchlist.schema.json": ["watchlists/*.yaml", "watchlists/*.yml"]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "mcp-recon-runner",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
@@ -12,21 +12,28 @@
   "scripts": {
     "mcp": "node ./src/mcp-server.js",
     "start": "node ./src/index.js",
-    "recon": "node ./src/index.js -p ./playbooks/web-basic-recon.md",
-    "recon:basic": "node ./src/index.js -p ./playbooks/web-basic-recon.md",
-    "recon:comprehensive": "node ./src/index.js -p ./playbooks/comprehensive-web-recon.md",
-    "recon:security": "node ./src/index.js -p ./playbooks/web-security-recon.md",
-    "recon:api": "node ./src/index.js -p ./playbooks/api-cloud-recon.md",
-    "recon:quick": "node ./src/index.js -p ./playbooks/quick-web-recon.md",
-    "test:nmap": "node ./src/index.js -p ./playbooks/nmap-cheat-sheet.md",
-    "test:network": "node ./src/index.js -p ./playbooks/network-connectivity-test.md",
+    "recon": "node ./src/index.js -p ./playbooks/web-basic-recon.yaml",
+    "recon:basic": "node ./src/index.js -p ./playbooks/web-basic-recon.yaml",
+    "recon:comprehensive": "node ./src/index.js -p ./playbooks/comprehensive-web-recon.yaml",
+    "recon:security": "node ./src/index.js -p ./playbooks/web-security-recon.yaml",
+    "recon:api": "node ./src/index.js -p ./playbooks/api-cloud-recon.yaml",
+    "recon:quick": "node ./src/index.js -p ./playbooks/quick-web-recon.yaml",
+    "test:nmap": "node ./src/index.js -p ./playbooks/nmap-cheat-sheet.yaml",
+    "test:network": "node ./src/index.js -p ./playbooks/network-connectivity-test.yaml",
+    "diff": "node ./src/index.js diff",
+    "watch": "node ./src/index.js watch",
+    "schedule": "node ./src/index.js schedule",
+    "report": "node ./src/index.js report",
     "help": "node ./src/index.js --help"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.2",
+    "docx": "^9.7.1",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
+    "node-cron": "^4.2.1",
+    "pdfkit": "^0.18.0",
     "whois-json": "^2.1.0",
     "yargs": "^17.7.2"
   }

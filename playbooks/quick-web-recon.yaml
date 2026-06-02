@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
+# Quick Web Reconnaissance
+# Fast reconnaissance optimized for speed — DNS, HTTP/TLS, and passive subdomains, without lengthy scans.
+
+id: quick-web-recon
+title: Quick Web Reconnaissance
+description: Fast reconnaissance optimized for speed — DNS, HTTP/TLS, and passive subdomains, without lengthy scans.
+vars:
+  target: example.com
+  scheme: https
+  timeout: 5000
+steps:
+  - name: DNS A Records
+    uses: dns.resolve
+    with:
+      types: [A]
+      timeoutMs: 3000
+  - name: DNS AAAA Records
+    uses: dns.resolve
+    with:
+      types: [AAAA]
+      timeoutMs: 3000
+  - name: HTTPS Headers
+    uses: http.headers
+    with:
+      path: /
+      scheme: https
+      timeoutMs: "{{vars.timeout}}"
+  - name: HTTP Headers (Fallback)
+    uses: http.headers
+    with:
+      path: /
+      scheme: http
+      timeoutMs: "{{vars.timeout}}"
+  - name: robots.txt
+    uses: http.get
+    with:
+      path: /robots.txt
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: sitemap.xml
+    uses: http.get
+    with:
+      path: /sitemap.xml
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: TLS Certificate
+    uses: tls.inspect
+    with:
+      port: 443
+      timeoutMs: 8000
+  - name: Subdomains (crt.sh)
+    uses: subdomains.passive
+    with:
+      sources: [crtsh]
+      timeoutMs: 10000

@@ -6,64 +6,56 @@ Playbooks let you define recon workflows without touching any JavaScript. Once c
 
 ## Step 1 — Create the file
 
-Create a `.md` file in the `playbooks/` directory:
+Copy the skeleton to a new `.yaml` file in the `playbooks/` directory:
 
 ```bash
-touch playbooks/my-recon.md
+cp playbooks/_template.yaml playbooks/my-recon.yaml
 ```
 
 ---
 
-## Step 2 — Write the YAML front matter
+## Step 2 — Write the YAML
 
-The front matter (between `---` markers) defines everything the runner needs:
+A playbook is pure YAML with three required keys (`id`, `title`, `description`)
+plus optional `vars` and a list of `steps`:
 
 ```yaml
----
 id: my-recon                 # required · used as MCP tool name: recon_play__my_recon
 title: My Recon Playbook     # required · shown in reports and MCP tool list
+description: One-line summary shown in the MCP tool listing and reports.
 vars:
-  target: "example.com"      # default target (overridden at runtime)
-  scheme: "https"
+  target: example.com        # default target (overridden at runtime)
+  scheme: https
   timeout: 10000
 steps:
   - name: DNS Records
     uses: dns.resolve
     with:
-      types: ["A", "AAAA", "NS", "MX", "TXT"]
+      types: [A, AAAA, NS, MX, TXT]
       timeoutMs: 5000
 
   - name: HTTP Headers
     uses: http.headers
+    parallel: true            # optional · runs concurrently with adjacent parallel steps
     with:
       path: "/"
       scheme: "{{vars.scheme}}"
       timeoutMs: "{{vars.timeout}}"
----
 ```
 
----
+The `description:` field is what appears in MCP tool listings and reports. Files
+whose name starts with `_` (like `_template.yaml`) are skipped by the loader.
 
-## Step 3 — Add a description (optional)
-
-Text below the closing `---` appears as the playbook description in MCP tool listings and reports:
-
-```markdown
----
-(YAML here)
----
-
-## My Recon for {{vars.target}}
-
-Brief description of what this playbook checks and when to use it.
-```
+> Legacy `.md` playbooks (YAML front matter between `---` markers, description as
+> the first body paragraph) are still loaded for backward compatibility, but new
+> playbooks should be `.yaml`.
 
 ---
 
-## Step 4 — Test it
+## Step 3 — Test it
 
 ```bash
-node src/index.js -p playbooks/my-recon.md --target example.com
+node src/index.js -p playbooks/my-recon.yaml --target example.com
 ```
 
 For MCP, restart Claude Desktop and the playbook will appear in `recon_topics`.
@@ -72,19 +64,16 @@ For MCP, restart Claude Desktop and the playbook will appear in `recon_topics`.
 
 ## Available executors
 
-| `uses` key | What it does |
-| ----------- | -------------- |
-| `dns.resolve` | DNS records (A, AAAA, NS, MX, TXT, CNAME, PTR, SOA) |
-| `whois.lookup` | WHOIS registration data |
-| `nmap.scan` | Port scanning |
-| `http.headers` | HTTP response headers |
-| `http.get` | HTTP GET with body snippet |
-| `tls.inspect` | TLS certificate + cipher |
-| `subdomains.passive` | Passive subdomain enumeration |
-| `network.ping` | ICMP ping |
-| `network.traceroute` | Traceroute hop-by-hop |
+| Stage | `uses` keys |
+| ----- | ----------- |
+| **PASSIVE / OSINT** | `dns.resolve` · `dns.reverse` · `whois.lookup` · `subdomains.passive` · `email.security` · `ip.intel` |
+| **LIVENESS** | `network.ping` · `network.traceroute` |
+| **PORTSCAN** | `nmap.scan` |
+| **WEBSCANNER** | `http.headers` · `http.get` · `http.security_score` · `http.waf_detect` · `http.fingerprint` · `http.cors_check` · `http.methods` · `tls.inspect` · `tls.deep` |
+| **VULN INTELLIGENCE** | `vuln.cve_lookup` · `shodan.host` (key-gated) |
+| **ESCALATION** | `cloud.bucket_finder` · `http.fuzz_paths` · `http.git_leak` |
 
-Full options for each: [executors.md](executors.md)
+Full options and return shapes for each: [executors.md](executors.md)
 
 ---
 

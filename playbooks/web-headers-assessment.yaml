@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../schemas/playbook.schema.json
+# Web Headers Assessment
+# HTTP response surface — A–F security header grade, WAF/CDN fingerprint, and technology stack.
+
+id: web-headers-assessment
+title: Web Headers Assessment
+description: HTTP response surface — A–F security header grade, WAF/CDN fingerprint, and technology stack.
+vars:
+  target: example.com
+  scheme: https
+  timeout: 10000
+steps:
+  - name: Security Header Score
+    uses: http.security_score
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: WAF / CDN Fingerprint
+    uses: http.waf_detect
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"
+  - name: Technology Fingerprint
+    uses: http.fingerprint
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      deep: true
+      timeoutMs: "{{vars.timeout}}"
+  - name: Raw Response Headers
+    uses: http.headers
+    with:
+      path: /
+      scheme: "{{vars.scheme}}"
+      timeoutMs: "{{vars.timeout}}"

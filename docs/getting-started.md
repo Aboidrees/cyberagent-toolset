@@ -10,7 +10,7 @@ For learning, `scanme.nmap.org` is a public host maintained by nmap specifically
 ### 2. Run a quick recon
 
 ```bash
-node src/index.js -p playbooks/quick-web-recon.md --target scanme.nmap.org
+node src/index.js -p playbooks/quick-web-recon.yaml --target scanme.nmap.org
 ```
 
 You will see step-by-step progress in the terminal. When it finishes:
@@ -29,7 +29,7 @@ The `.md` report has collapsible sections for every step — open it in any Mark
 
 ```bash
 # Full infrastructure + web + security sweep
-node src/index.js -p playbooks/web-basic-recon.md --target scanme.nmap.org
+node src/index.js -p playbooks/web-basic-recon.yaml --target scanme.nmap.org
 ```
 
 ---

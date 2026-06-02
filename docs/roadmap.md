@@ -4,17 +4,18 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 ---
 
-## Current state — v0.5.0
+## Current state — v0.6.0
 
 | Area | Status |
 | ------ | -------- |
 | 8 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute) | ✅ Done |
 | 7 Phase 1 executors (dns.reverse, email.security, ip.intel, http.security_score, http.waf_detect, http.fingerprint, tls.deep) | ✅ Done |
 | 7 Phase 2 executors (vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods) | ✅ Done |
+| Phase 3 scale & automation (parallel steps, scheduling, diff, watchlist, PDF/DOCX/HTML export, webhooks) | ✅ Done |
 | MCP server with dynamic playbook-driven tool registration (23 executor tools) | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks (incl. email-security, tls-deep, web-headers, vulnerability, owasp-top10, cloud-security) | ✅ Done |
-| CLI with `--target` flag, JSON + Markdown report output | ✅ Done |
+| Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
 | Full documentation suite | ✅ Done |
 
 ---
@@ -87,7 +88,7 @@ When a planned executor ships, flip its box to ✅ here and mirror it in CyberAg
 
 ## Phase 1 — Deeper intelligence  *(next)*
 
-### New executors
+### New executors for phase 1
 
 #### Email security analyser
 
@@ -178,7 +179,7 @@ Identifies the technology stack from HTTP headers and body patterns — framewor
     deep: true
 ```
 
-### New playbooks
+### New playbooks for phase 1
 
 | Playbook | Steps | Focus |
 | ---------- | ------- | ------- |
@@ -190,14 +191,14 @@ Identifies the technology stack from HTTP headers and body patterns — framewor
 
 ## Phase 2 — Vulnerability intelligence  *(shipped in v0.5.0)*
 
-> **Status:** All five Phase 2 executors below are shipped (`vuln.cve_lookup`,
-> `shodan.host`, `cloud.bucket_finder`, `http.fuzz_paths`, `http.git_leak`), plus
-> two extra WEBSCANNER checks (`http.cors_check`, `http.methods`) and the three new
-> playbooks. The **Report enhancement** sub-section (executive summary, risk matrix,
-> CVSS-classified Markdown reports) is the remaining Phase 2 item and is not yet
-> implemented.
+> **Status: complete.** All five Phase 2 executors below are shipped
+> (`vuln.cve_lookup`, `shodan.host`, `cloud.bucket_finder`, `http.fuzz_paths`,
+> `http.git_leak`), plus two extra WEBSCANNER checks (`http.cors_check`,
+> `http.methods`) and the three new playbooks. The **Report enhancement**
+> sub-section (executive summary, risk matrix, severity-classified findings in the
+> Markdown report) shipped in v0.6.0 alongside Phase 3.
 
-### New executors
+### New executors for phase 2
 
 #### CVE lookup
 
@@ -273,7 +274,7 @@ Checks for exposed `.git` directory and reconstructs leaked content indicators:
 - Risk matrix table (Critical / High / Medium / Low / Info)
 - Remediation suggestions per finding type
 
-### New playbooks
+### New playbooks for phase 2
 
 | Playbook | Steps | Focus |
 | ---------- | ------- | ------- |
@@ -283,7 +284,13 @@ Checks for exposed `.git` directory and reconstructs leaked content indicators:
 
 ---
 
-## Phase 3 — Scale and automation
+## Phase 3 — Scale and automation  *(shipped in v0.6.0)*
+
+> **Status: complete.** All six features below are implemented: parallel step
+> execution, scheduled scanning (`node-cron`), diff reports, target watchlist,
+> PDF/DOCX/HTML report export (`pdfkit` / `docx`), and webhook notifications.
+> Runs now also carry an aggregated findings rollup with an executive summary and
+> risk matrix in the Markdown report.
 
 ### Parallel step execution
 
@@ -305,8 +312,8 @@ steps:
 Integration with the Claude Desktop scheduled tasks system — run a playbook against a target on a cron schedule and get notified when new findings appear.
 
 ```bash
-# Run quick-web-recon on cyberany.org every Monday at 08:00
-npm run schedule -- --playbook quick-web-recon --target cyberany.org --cron "0 8 * * 1"
+# Run quick-web-recon on fortmind.qa every Monday at 08:00
+npm run schedule -- --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"
 ```
 
 ### Diff reports
@@ -324,9 +331,9 @@ Define a list of targets and playbooks in a YAML file and run the full batch in 
 ```yaml
 # watchlist.yml
 targets:
-  - host: cyberany.org
+  - host: fortmind.qa
     playbooks: [quick-web-recon, web-security-recon]
-  - host: api.cyberany.org
+  - host: api.fortmind.qa
     playbooks: [api-cloud-recon]
 ```
 
@@ -411,4 +418,4 @@ If you want to work on a roadmap item or propose a new one:
 
 1. Open an issue or pull request on GitHub.
 2. For new executors: follow the pattern in [Creating Playbooks](creating-playbooks.md#adding-a-custom-executor).
-3. For new playbooks: drop a `.md` file in `playbooks/` — they auto-register with zero code changes.
+3. For new playbooks: drop a `.yaml` file in `playbooks/` — they auto-register with zero code changes.

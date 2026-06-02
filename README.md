@@ -2,14 +2,13 @@
 
 > Modular, playbook-driven reconnaissance tool for cybersecurity professionals.
 > Works as a standalone CLI **and** as a live MCP server that gives Claude direct access to all recon capabilities.
-
 > **⚠️ Only test systems you own or have explicit written authorisation to assess. Unauthorised scanning may violate laws and regulations.**
 
 ---
 
 ## What it does
 
-MCP Recon Runner orchestrates reconnaissance workflows defined in Markdown playbooks. Point it at a target, pick one or more topic-based playbooks, and it runs every check — DNS, WHOIS, port scan, HTTP headers, TLS, subdomain enumeration, and more — then saves structured JSON + Markdown reports.
+MCP Recon Runner orchestrates reconnaissance workflows defined in YAML playbooks. Point it at a target, pick one or more topic-based playbooks, and it runs every check — DNS, WHOIS, port scan, HTTP headers, TLS, subdomain enumeration, and more — then saves structured JSON + Markdown reports (and optional PDF/DOCX).
 
 When the MCP server is running, Claude can drive the entire workflow interactively: list available topics, ask which ones you want, run the selected playbooks, and present findings — all in natural language.
 
@@ -18,7 +17,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 ## Documentation
 
 | Doc | What it covers |
-|-----|----------------|
+| ----- | ---------------- |
 | [Installation](docs/installation.md) | Prerequisites, platform-specific setup, dependency install |
 | [Getting Started](docs/getting-started.md) | First recon in under 5 minutes, output explained |
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
@@ -40,7 +39,7 @@ cd mcp-recon-runner
 npm install
 
 # 2. Run a quick recon
-node src/index.js -p playbooks/quick-web-recon.md --target example.com
+node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
 
 # 3. Or start the MCP server for Claude
 npm run mcp
@@ -50,10 +49,32 @@ Reports are saved to `runs/` as `.json` and `.md`.
 
 ---
 
+## Automation (CLI)
+
+```bash
+# Diff two runs (exits non-zero when something changed)
+node src/index.js diff runs/old.json runs/new.json
+
+# Batch-run a watchlist of targets + playbooks
+node src/index.js watch --list watchlists/example.yaml
+
+# Schedule a recurring scan (new findings fire webhooks)
+node src/index.js schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"
+
+# Export a run to PDF / DOCX / HTML
+node src/index.js report runs/run.json --format pdf --out report.pdf
+```
+
+Parallel steps (`parallel: true`), an executive-summary + risk-matrix in every
+report, and Slack/webhook notifications (`SLACK_WEBHOOK_URL` / `WEBHOOK_URL`) are
+built in. See [Configuration](docs/configuration.md).
+
+---
+
 ## Available playbooks
 
 | Playbook | Steps | Focus |
-|----------|-------|-------|
+| ---------- | ------- | ------- |
 | `quick-web-recon` | 8 | Fast essentials — DNS, headers, TLS, subdomains |
 | `web-basic-recon` | 7 | DNS · WHOIS · ports · HTTP · TLS · subdomains |
 | `web-security-recon` | 51 | Exposed files, admin panels, framework leaks |
@@ -71,12 +92,16 @@ Reports are saved to `runs/` as `.json` and `.md`.
 
 ## Project structure
 
-```
+```TREE
 mcp-recon-runner/
 ├── src/
-│   ├── index.js              # CLI entry point
+│   ├── index.js              # CLI entry (run · diff · watch · schedule · report)
 │   ├── mcp-server.js         # MCP server (dynamic tool registration)
-│   ├── runner.js             # Playbook orchestration engine
+│   ├── runner.js             # Playbook engine (parallel steps, findings rollup)
+│   ├── diff.js               # Compare two runs
+│   ├── watch.js              # Run a watchlist of targets
+│   ├── schedule.js           # Cron-scheduled scanning (node-cron)
+│   ├── report.js             # PDF / DOCX / HTML report export
 │   ├── executors/            # One file per recon capability
 │   │   ├── cloud.js          # cloud.bucket_finder (AWS/GCP/Azure)
 │   │   ├── dns.js            # dns.resolve · dns.reverse
@@ -92,12 +117,14 @@ mcp-recon-runner/
 │   │   ├── vuln.js           # vuln.cve_lookup (NVD)
 │   │   └── whois.js
 │   └── utils/
+│       ├── findings.js       # Severity-rated findings model
 │       ├── fsx.js            # File system helpers
+│       ├── notify.js         # Webhook / Slack notifications
 │       ├── logger.js         # stderr-safe step logger
 │       ├── os.js             # OS detection + command availability
 │       ├── playbooks.js      # Dynamic playbook loader
 │       └── validate.js       # Input validation (injection prevention)
-├── playbooks/                # Recon playbooks (drop .md here to add tools)
+├── playbooks/                # Recon playbooks (drop .yaml here to add tools)
 ├── docs/                     # Full documentation
 └── runs/                     # Auto-generated reports (gitignored)
 ```

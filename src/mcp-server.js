@@ -1,5 +1,5 @@
 /**
- * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.5.0
+ * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.6.0
  *
  * Architecture
  * ────────────
@@ -534,7 +534,7 @@ async function main() {
 
   // ── MCP server ─────────────────────────────────────────────────────────────
   const server = new Server(
-    { name: 'mcp-recon-runner', version: '0.5.0' },
+    { name: 'mcp-recon-runner', version: '0.6.0' },
     { capabilities: { tools: {} } }
   );
 
@@ -820,7 +820,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `MCP Recon Runner v0.5.0 ready — ${ALL_TOOLS.length} tools registered ` +
+    `MCP Recon Runner v0.6.0 ready — ${ALL_TOOLS.length} tools registered ` +
     `(${EXECUTOR_TOOLS.length} executor + 3 orchestration + ${PLAYBOOKS.length} playbook)\n`
   );
 }
