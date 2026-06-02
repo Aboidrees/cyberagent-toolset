@@ -6,7 +6,7 @@ id: web-headers-assessment
 title: Web Headers Assessment
 description: HTTP response surface — A–F security header grade, WAF/CDN fingerprint, and technology stack.
 vars:
-  target: example.com
+  target: fortmind.qa
   scheme: https
   timeout: 10000
 steps:

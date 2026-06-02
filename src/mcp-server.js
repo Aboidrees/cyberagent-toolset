@@ -1,492 +1,101 @@
 /**
- * MCP Recon Runner — Dynamic Model Context Protocol Server  v0.6.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.7.0
  *
- * Architecture
- * ────────────
- * 1. At startup, every .md file in playbooks/ is scanned and registered as
- *    its own MCP tool (recon_play__<id>). No code changes needed to add a
- *    new playbook — just drop a file in the folder and restart the server.
+ * Tools are generated dynamically from two sources:
+ *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
+ *      from local extensions/ and npm cyberagent-ext-* plugins.
+ *   2. The playbooks/ directory — one `cats_play__<id>` tool per playbook, plus
+ *      orchestration tools (cats_topics, cats_run, cats_run_multi).
  *
- * 2. recon_topics   → lists every available playbook with full metadata so
- *    the AI (or caller) can present options to the user before running.
+ * Nothing is hardcoded — drop in an extension or a playbook and restart.
  *
- * 3. recon_run      → runs ONE playbook by id against a target.
- *
- * 4. recon_run_multi → runs MANY playbooks in one call, aggregating results.
- *
- * 5. Low-level executor tools remain available for ad-hoc targeted queries.
- *
- * Typical interactive flow
- * ────────────────────────
- *   Claude: calls recon_topics  → gets list of playbooks with descriptions
- *   Claude: asks user to pick one or more (AskUserQuestion multi-select)
- *   User:   selects e.g. ["quick-web-recon", "web-security-recon"]
- *   Claude: calls recon_run_multi { target, playbooks: [...] }
- *   Claude: presents aggregated findings
- *
- * Transport: stdio (standard for local MCP servers)
- *
- * Claude Desktop config (~/.claude/claude_desktop_config.json):
- *   {
- *     "mcpServers": {
- *       "recon": {
- *         "command": "node",
- *         "args": ["/absolute/path/to/mcp-recon-runner/src/mcp-server.js"]
- *       }
- *     }
- *   }
+ * Transport: stdio. Claude Desktop config:
+ *   { "mcpServers": { "cyberagent": {
+ *       "command": "node",
+ *       "args": ["/abs/path/to/src/mcp-server.js"] } } }
  */
 
+import './env.js';
 import { Server }               from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import fs   from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Executors
-import { resolveDNS, reverseDNS }              from './executors/dns.js';
-import { lookupWhois }                         from './executors/whois.js';
-import { scanNmap }                            from './executors/nmap.js';
-import { getHeaders, getPath, securityScore,
-         wafDetect, fingerprint, fuzzPaths,
-         gitLeak, corsCheck, methods }         from './executors/http.js';
-import { inspectTLS, deepTLS }                 from './executors/tls.js';
-import { passive }                             from './executors/subdomains.js';
-import { ping }                                from './executors/ping.js';
-import { traceroute }                          from './executors/traceroute.js';
-import { security as emailSecurity }           from './executors/email.js';
-import { intel as ipIntel }                    from './executors/ip.js';
-import { cveLookup }                            from './executors/vuln.js';
-import { hostLookup as shodanHost }             from './executors/shodan.js';
-import { bucketFinder }                         from './executors/cloud.js';
+import { loadCatalog }   from './extensions/loader.js';
+import { runPlaybook }   from './runner.js';
+import { ensureDir }     from './utils/fsx.js';
+import { loadPlaybooks } from './utils/playbooks.js';
 
-// Utilities
-import { runPlaybook }                       from './runner.js';
-import { ensureDir }                         from './utils/fsx.js';
-import { loadPlaybooks, PLAYBOOKS_DIR }      from './utils/playbooks.js';
-
+const VERSION = '0.7.0';
+const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Static low-level executor tools (always present, target-only callers)
-// ─────────────────────────────────────────────────────────────────────────────
-const EXECUTOR_TOOLS = [
-  {
-    name: 'recon_dns',
-    description:
-      'Resolve DNS records for a domain. Returns A, AAAA, NS, MX, TXT, CNAME, SOA etc. ' +
-      'Good for quick infrastructure mapping.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target: { type: 'string', description: 'Domain to query (e.g. "example.com")' },
-        types: {
-          type: 'array', items: { type: 'string' },
-          description: 'Record types. Default: ["A","AAAA"]. Options: A,AAAA,CNAME,NS,MX,TXT,PTR,SOA',
-        },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_whois',
-    description: 'WHOIS lookup — registrar, dates, name servers, registrant, abuse contact.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target: { type: 'string', description: 'Domain or IP address' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_nmap',
-    description:
-      'nmap port scan. Non-privileged TCP connect scan by default. ' +
-      'WARNING: only scan hosts you have explicit authorisation to test.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname, IP, or CIDR range' },
-        flags:     { type: 'string', description: 'nmap flags. Default: "-sT -Pn --top-ports 1000"' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 300000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_http_headers',
-    description:
-      'HTTP response headers — server banner, security headers (HSTS, CSP, X-Frame-Options), cookies.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        path:      { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_http_get',
-    description:
-      'Full HTTP GET — status, headers, and body snippet (5000 chars). ' +
-      'Useful for probing paths like /.env, /.git, /backup.zip.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        path:      { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_tls',
-    description:
-      'TLS/SSL inspection — certificate subject, SANs, issuer, validity dates, cipher suite. ' +
-      'Flags expired certs and weak ciphers.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target: { type: 'string', description: 'Hostname' },
-        port:   { type: 'number', description: 'TLS port. Default: 443' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_subdomains',
-    description:
-      'Passive subdomain enumeration via certificate transparency logs (crt.sh). ' +
-      'No active probing — safe to run first.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target: { type: 'string', description: 'Base domain (e.g. "example.com")' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_ping',
-    description: 'ICMP ping — reachability, packet loss, min/avg/max latency.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        count:     { type: 'number', description: 'Packets. Default: 4' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 30000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_traceroute',
-    description: 'Traceroute — hop-by-hop network path with per-hop latency.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        maxHops:   { type: 'number', description: 'Max hops. Default: 30' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 60000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_dns_reverse',
-    description:
-      'Reverse DNS (PTR) lookup / sweep. Accepts a single IP, an IPv4 CIDR range ' +
-      '(sweeps every host, capped at 256), or a hostname (resolves then reverses). ' +
-      'Returns a per-IP PTR map plus a flat name list.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:   { type: 'string', description: 'IP, IPv4 CIDR (e.g. 192.168.1.0/24), or hostname' },
-        maxHosts: { type: 'number', description: 'Max addresses for a CIDR sweep. Default: 256' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_email_security',
-    description:
-      'Email security posture — SPF, DMARC, DKIM (probes common selectors), MTA-STS, and BIMI. ' +
-      'Passive DNS + one HTTPS fetch for the MTA-STS policy. Flags spoofing-enabling misconfigs.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Domain (e.g. "example.com")' },
-        selectors: { type: 'array', items: { type: 'string' }, description: 'DKIM selectors to probe (optional)' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 8000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_ip_intel',
-    description:
-      'ASN / IP intelligence via Team Cymru (keyless): ASN, BGP prefix, country, registry, ' +
-      'and hosting/CDN classification. Abuse reputation is included only if ABUSEIPDB_API_KEY is set.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target: { type: 'string', description: 'IP or hostname (hostname is A-resolved)' },
-        ip:     { type: 'string', description: 'Explicit IP to analyse instead of resolving target (optional)' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_http_security_score',
-    description:
-      'Security-header scorer — grades Content-Security-Policy, HSTS, X-Frame-Options, ' +
-      'X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-* on an A–F scale ' +
-      'with per-header remediation advice and info-leak detection.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        path:      { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_http_waf_detect',
-    description:
-      'WAF / CDN fingerprint from response headers, cookies, and banners. Detects Cloudflare, ' +
-      'AWS WAF/CloudFront, Akamai, Imperva/Incapsula, Sucuri, F5 BIG-IP, Fastly, Varnish, Azure Front Door.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        path:      { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_http_fingerprint',
-    description:
-      'Technology stack fingerprint from headers and HTML body — server, language, framework, ' +
-      'CMS, analytics, and JS libraries.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname or IP' },
-        path:      { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:    { type: 'string', description: '"http" or "https". Default: "https"' },
-        deep:      { type: 'boolean', description: 'Also inspect HTML body markers. Default: true' },
-        timeoutMs: { type: 'number', description: 'Timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_tls_deep',
-    description:
-      'Deep TLS analysis — protocol support matrix (flags TLS 1.0/1.1), weak-cipher negotiation ' +
-      '(RC4/3DES/NULL), certificate chain validation, OCSP stapling, and HSTS/preload status.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:    { type: 'string', description: 'Hostname' },
-        port:      { type: 'number', description: 'TLS port. Default: 443' },
-        timeoutMs: { type: 'number', description: 'Per-probe timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_cve_lookup',
-    description:
-      'CVE lookup against the NVD (National Vulnerability Database, API v2). Match by ' +
-      'cpe, keyword, or product+version. Returns CVEs with CVSS score, severity, and summary. ' +
-      'Keyless (set NVD_API_KEY to raise the rate limit).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        keyword: { type: 'string', description: 'Free-text search, e.g. "Apache 2.4.49"' },
-        cpe:     { type: 'string', description: 'Exact CPE 2.3 name (optional)' },
-        product: { type: 'string', description: 'Product name (combined with version)' },
-        version: { type: 'string', description: 'Product version' },
-        minCvss: { type: 'number', description: 'Minimum CVSS base score to include. Default: 0' },
-        severity:{ type: 'string', description: 'Filter by CVSS v3 severity: LOW|MEDIUM|HIGH|CRITICAL' },
-        maxResults: { type: 'number', description: 'Max CVEs to return. Default: 20' },
-      },
-      required: [],
-    },
-  },
-  {
-    name: 'recon_shodan_host',
-    description:
-      'Shodan host lookup — open ports, services, banners, CVEs, and tags from Shodan\'s index. ' +
-      'Requires SHODAN_API_KEY (or apiKey); returns a no-op note when no key is set.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target: { type: 'string', description: 'IP or hostname (hostname is A-resolved)' },
-        apiKey: { type: 'string', description: 'Shodan API key (or set SHODAN_API_KEY env)' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_bucket_finder',
-    description:
-      'Cloud storage bucket finder — derives candidate bucket names from the target domain and ' +
-      'probes AWS S3, GCP Cloud Storage, and Azure Blob for public exposure. Read-only, keyless.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:     { type: 'string', description: 'Base domain (e.g. "example.com")' },
-        extraNames: { type: 'array', items: { type: 'string' }, description: 'Extra candidate bucket names (optional)' },
-        timeoutMs:  { type: 'number', description: 'Per-probe timeout ms. Default: 8000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_fuzz_paths',
-    description:
-      'Active path enumeration — probes a built-in wordlist (common|api|admin|php|asp) or a custom ' +
-      'list against the target and reports which paths exist by status code. Active — authorized targets only.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:   { type: 'string', description: 'Hostname or IP' },
-        wordlist: { type: 'string', description: 'Built-in list: common|api|admin|php|asp. Default: common' },
-        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
-        threads:  { type: 'number', description: 'Concurrency. Default: 10' },
-        timeoutMs:{ type: 'number', description: 'Per-request timeout ms. Default: 5000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_git_leak',
-    description:
-      'Git repository leak detector — checks for an exposed .git/ directory and pulls indicators ' +
-      '(remote origin URL, last commit message) when reachable. Flags critical on exposure.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:   { type: 'string', description: 'Hostname or IP' },
-        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
-        timeoutMs:{ type: 'number', description: 'Per-request timeout ms. Default: 8000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_cors_check',
-    description:
-      'CORS misconfiguration probe — sends a hostile Origin and inspects the ' +
-      'Access-Control-Allow-Origin / -Credentials response. Flags origin reflection and ' +
-      'wildcard-plus-credentials.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:   { type: 'string', description: 'Hostname or IP' },
-        path:     { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
-        origin:   { type: 'string', description: 'Test Origin header. Default: https://evil.example.com' },
-        timeoutMs:{ type: 'number', description: 'Timeout ms. Default: 10000' },
-      },
-      required: ['target'],
-    },
-  },
-  {
-    name: 'recon_http_methods',
-    description:
-      'HTTP methods audit — reads the OPTIONS Allow header and actively probes risky methods ' +
-      '(PUT/DELETE/TRACE/PATCH). Flags TRACE (XST) and accepted write methods.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        target:   { type: 'string', description: 'Hostname or IP' },
-        path:     { type: 'string', description: 'URL path. Default: "/"' },
-        scheme:   { type: 'string', description: '"http" or "https". Default: "https"' },
-        timeoutMs:{ type: 'number', description: 'Per-request timeout ms. Default: 8000' },
-      },
-      required: ['target'],
-    },
-  },
-];
+const usesToTool = (uses) => `${PREFIX}_${uses.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Orchestration tools (built once playbooks are loaded)
+// Executor tools — one per catalog executor
+// ─────────────────────────────────────────────────────────────────────────────
+function buildExecutorTools(catalog) {
+  return catalog.executors.map(e => {
+    const props = { ...(e.inputSchema || { target: { type: 'string', description: 'Target' } }) };
+    const required = props.target ? ['target'] : [];
+    return {
+      name: usesToTool(e.uses),
+      description: `[${e.phase} · ${e.posture} · ${e.domain}] ${e.summary} (uses: ${e.uses})`,
+      inputSchema: { type: 'object', properties: props, required },
+    };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Orchestration + per-playbook tools
 // ─────────────────────────────────────────────────────────────────────────────
 function buildOrchestrationTools(playbooks) {
-  const playbookChoices = playbooks
-    .map(p => `"${p.id}" — ${p.title} (${p.stepCount} steps)`)
-    .join(', ');
-
+  const choices = playbooks.map(p => `"${p.id}"`).join(', ');
   return [
-    // ── Topic discovery ──────────────────────────────────────────────────────
     {
-      name: 'recon_topics',
+      name: `${PREFIX}_capabilities`,
       description:
-        'List every available recon playbook with its full metadata: id, title, description, ' +
-        'step count, step names, and executor types used. ' +
-        'Call this FIRST when the user wants to start a recon session so you can present ' +
-        'the options and ask which topics they want to run.',
+        'List every executor grouped by phase (reconnaissance/scanning/gaining-access), ' +
+        'posture (passive/active), and domain. Use to discover what the toolset can do.',
       inputSchema: { type: 'object', properties: {} },
     },
-
-    // ── Single playbook runner ───────────────────────────────────────────────
     {
-      name: 'recon_run',
+      name: `${PREFIX}_topics`,
       description:
-        'Run a single recon playbook against a target. ' +
-        `Available playbook ids: ${playbookChoices}. ` +
-        'Returns the full step-by-step results and paths to the saved JSON + Markdown report.',
+        'List every available playbook with id, title, description, step count, and executors. ' +
+        'Call this FIRST to present options before running.',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: `${PREFIX}_run`,
+      description: `Run a single playbook against a target. Available ids: ${choices}.`,
       inputSchema: {
         type: 'object',
         properties: {
-          target:       { type: 'string', description: 'Target hostname or IP address' },
-          playbook:     { type: 'string', description: 'Playbook id (from recon_topics)' },
-          vars:         { type: 'object', description: 'Extra variables to inject (optional)' },
-          stepTimeoutMs:{ type: 'number', description: 'Per-step timeout override ms (optional)' },
+          target:        { type: 'string', description: 'Target hostname or IP' },
+          playbook:      { type: 'string', description: 'Playbook id' },
+          vars:          { type: 'object', description: 'Extra variables (optional)' },
+          stepTimeoutMs: { type: 'number', description: 'Per-step timeout override (optional)' },
         },
         required: ['target', 'playbook'],
       },
     },
-
-    // ── Multi-playbook runner ────────────────────────────────────────────────
     {
-      name: 'recon_run_multi',
-      description:
-        'Run MULTIPLE recon playbooks against a single target in one call. ' +
-        'Results from each playbook are collected and returned together. ' +
-        'Use this after presenting recon_topics to the user and collecting their selection. ' +
-        `Available playbook ids: ${playbookChoices}.`,
+      name: `${PREFIX}_run_multi`,
+      description: `Run MULTIPLE playbooks against one target. Available ids: ${choices}.`,
       inputSchema: {
         type: 'object',
         properties: {
-          target: { type: 'string', description: 'Target hostname or IP address' },
-          playbooks: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Array of playbook ids to run (from recon_topics)',
-          },
-          vars:         { type: 'object', description: 'Variables to inject into every playbook (optional)' },
-          stepTimeoutMs:{ type: 'number', description: 'Per-step timeout override ms (optional)' },
+          target:        { type: 'string', description: 'Target hostname or IP' },
+          playbooks:     { type: 'array', items: { type: 'string' }, description: 'Playbook ids' },
+          vars:          { type: 'object', description: 'Variables injected into every playbook (optional)' },
+          stepTimeoutMs: { type: 'number', description: 'Per-step timeout override (optional)' },
         },
         required: ['target', 'playbooks'],
       },
@@ -494,16 +103,10 @@ function buildOrchestrationTools(playbooks) {
   ];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-playbook dynamic tools  (recon_play__<id>)
-// ─────────────────────────────────────────────────────────────────────────────
 function buildPlaybookTools(playbooks) {
   return playbooks.map(pb => ({
-    name: `recon_play__${pb.toolName}`,
-    description:
-      `[${pb.title}] ${pb.description} ` +
-      `Steps (${pb.stepCount}): ${pb.steps.join(' → ')}. ` +
-      `Executors: ${pb.executors.join(', ')}.`,
+    name: `${PREFIX}_play__${pb.toolName}`,
+    description: `[${pb.title}] ${pb.description} Steps (${pb.stepCount}): ${pb.steps.join(' → ')}.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -516,312 +119,107 @@ function buildPlaybookTools(playbooks) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Server bootstrap
-// ─────────────────────────────────────────────────────────────────────────────
 async function main() {
-  // Load all playbooks from disk
+  const catalog   = await loadCatalog();
   const PLAYBOOKS = await loadPlaybooks();
+
   process.stderr.write(
-    `Loaded ${PLAYBOOKS.length} playbooks: ${PLAYBOOKS.map(p => p.id).join(', ')}\n`
+    `Loaded ${catalog.descriptors.length} extensions (${catalog.executors.length} executors), ` +
+    `${PLAYBOOKS.length} playbooks\n`
   );
 
-  // Build the full tool list
+  // Reverse map: tool name -> uses key, for dispatch.
+  const toolToUses = new Map(catalog.executors.map(e => [usesToTool(e.uses), e.uses]));
+
   const ALL_TOOLS = [
-    ...EXECUTOR_TOOLS,
+    ...buildExecutorTools(catalog),
     ...buildOrchestrationTools(PLAYBOOKS),
     ...buildPlaybookTools(PLAYBOOKS),
   ];
 
-  // ── MCP server ─────────────────────────────────────────────────────────────
   const server = new Server(
-    { name: 'mcp-recon-runner', version: '0.6.0' },
+    { name: 'cyberagent-toolset', version: VERSION },
     { capabilities: { tools: {} } }
   );
 
-  // List tools
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
 
-  // Call tool
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
-
     try {
       let result;
 
-      // ── Executor tools ──────────────────────────────────────────────────────
-      switch (name) {
-        case 'recon_dns':
-          result = await resolveDNS(args.target, { types: args.types });
-          break;
+      if (name === `${PREFIX}_capabilities`) {
+        result = {
+          phases: Object.fromEntries(Object.entries(catalog.byPhase).map(([p, list]) =>
+            [p, list.map(e => ({ uses: e.uses, posture: e.posture, domain: e.domain, summary: e.summary }))])),
+          domains: Object.keys(catalog.byDomain).sort(),
+          extensions: catalog.descriptors.map(d => ({ name: d.name, version: d.version, description: d.description })),
+        };
 
-        case 'recon_whois':
-          result = await lookupWhois(args.target);
-          break;
+      } else if (name === `${PREFIX}_topics`) {
+        result = PLAYBOOKS.map(pb => ({
+          id: pb.id, title: pb.title, description: pb.description,
+          stepCount: pb.stepCount, steps: pb.steps, executors: pb.executors, defaultVars: pb.defaultVars,
+        }));
 
-        case 'recon_nmap':
-          result = await scanNmap(args.target, {
-            flags: args.flags,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
+      } else if (name === `${PREFIX}_run`) {
+        const pb = PLAYBOOKS.find(p => p.id === args.playbook);
+        if (!pb) throw new Error(`Playbook "${args.playbook}" not found. Available: ${PLAYBOOKS.map(p => p.id).join(', ')}`);
+        await ensureDir(RUNS_DIR);
+        result = await runPlaybook({
+          playbookPath: pb.file, outDir: RUNS_DIR,
+          varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs,
+        });
 
-        case 'recon_http_headers':
-          result = await getHeaders(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_http_get':
-          result = await getPath(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_tls':
-          result = await inspectTLS(args.target, { port: args.port });
-          break;
-
-        case 'recon_subdomains':
-          result = await passive(args.target);
-          break;
-
-        case 'recon_ping':
-          result = await ping(args.target, {
-            count: args.count,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_traceroute':
-          result = await traceroute(args.target, {
-            maxHops: args.maxHops,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_dns_reverse':
-          result = await reverseDNS(args.target, { maxHosts: args.maxHosts });
-          break;
-
-        case 'recon_email_security':
-          result = await emailSecurity(args.target, {
-            selectors: args.selectors,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_ip_intel':
-          result = await ipIntel(args.target, { ip: args.ip });
-          break;
-
-        case 'recon_http_security_score':
-          result = await securityScore(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_http_waf_detect':
-          result = await wafDetect(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_http_fingerprint':
-          result = await fingerprint(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            deep: args.deep,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_tls_deep':
-          result = await deepTLS(args.target, {
-            port: args.port,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_cve_lookup':
-          result = await cveLookup(null, {
-            keyword: args.keyword,
-            cpe: args.cpe,
-            product: args.product,
-            version: args.version,
-            minCvss: args.minCvss,
-            severity: args.severity,
-            maxResults: args.maxResults,
-          });
-          break;
-
-        case 'recon_shodan_host':
-          result = await shodanHost(args.target, { apiKey: args.apiKey });
-          break;
-
-        case 'recon_bucket_finder':
-          result = await bucketFinder(args.target, {
-            extraNames: args.extraNames,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_fuzz_paths':
-          result = await fuzzPaths(args.target, {
-            wordlist: args.wordlist,
-            scheme: args.scheme,
-            threads: args.threads,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_git_leak':
-          result = await gitLeak(args.target, {
-            scheme: args.scheme,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_cors_check':
-          result = await corsCheck(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            origin: args.origin,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        case 'recon_http_methods':
-          result = await methods(args.target, {
-            path: args.path,
-            scheme: args.scheme,
-            timeoutMs: args.timeoutMs,
-          });
-          break;
-
-        // ── Topic discovery ───────────────────────────────────────────────────
-        case 'recon_topics':
-          result = PLAYBOOKS.map(pb => ({
-            id:          pb.id,
-            title:       pb.title,
-            description: pb.description,
-            stepCount:   pb.stepCount,
-            steps:       pb.steps,
-            executors:   pb.executors,
-            defaultVars: pb.defaultVars,
-          }));
-          break;
-
-        // ── Single playbook runner ────────────────────────────────────────────
-        case 'recon_run': {
-          const pb = PLAYBOOKS.find(p => p.id === args.playbook);
-          if (!pb) {
-            throw new Error(
-              `Playbook "${args.playbook}" not found. ` +
-              `Available: ${PLAYBOOKS.map(p => p.id).join(', ')}`
-            );
-          }
-          await ensureDir(RUNS_DIR);
-          result = await runPlaybook({
-            playbookPath:  pb.file,
-            outDir:        RUNS_DIR,
-            varOverrides:  { target: args.target, ...(args.vars || {}) },
-            stepTimeoutMs: args.stepTimeoutMs,
-          });
-          break;
-        }
-
-        // ── Multi-playbook runner ─────────────────────────────────────────────
-        case 'recon_run_multi': {
-          await ensureDir(RUNS_DIR);
-          const results = [];
-
-          for (const playbookId of (args.playbooks || [])) {
-            const pb = PLAYBOOKS.find(p => p.id === playbookId);
-            if (!pb) {
-              results.push({ playbook: playbookId, error: 'Playbook not found' });
-              continue;
-            }
-            try {
-              const r = await runPlaybook({
-                playbookPath:  pb.file,
-                outDir:        RUNS_DIR,
-                varOverrides:  { target: args.target, ...(args.vars || {}) },
-                stepTimeoutMs: args.stepTimeoutMs,
-              });
-              results.push({
-                playbook: playbookId,
-                title:    pb.title,
-                ok:       true,
-                jsonPath: r.jsonPath,
-                mdPath:   r.mdPath,
-                report:   r.report,
-              });
-            } catch (e) {
-              results.push({
-                playbook: playbookId,
-                title:    pb.title,
-                ok:       false,
-                error:    e.message,
-              });
-            }
-          }
-
-          result = {
-            target:       args.target,
-            playbooksRun: results.length,
-            results,
-          };
-          break;
-        }
-
-        // ── Dynamic per-playbook tools  (recon_play__<toolName>) ─────────────
-        default: {
-          if (name.startsWith('recon_play__')) {
-            const toolSuffix = name.slice('recon_play__'.length);
-            // Match by toolName (underscored) against loaded playbooks
-            const pb = PLAYBOOKS.find(p => p.toolName === toolSuffix);
-            if (!pb) {
-              throw new Error(`No playbook matched tool "${name}".`);
-            }
-            await ensureDir(RUNS_DIR);
-            result = await runPlaybook({
-              playbookPath:  pb.file,
-              outDir:        RUNS_DIR,
-              varOverrides:  { target: args.target, ...(args.vars || {}) },
-              stepTimeoutMs: args.stepTimeoutMs,
+      } else if (name === `${PREFIX}_run_multi`) {
+        await ensureDir(RUNS_DIR);
+        const results = [];
+        for (const id of (args.playbooks || [])) {
+          const pb = PLAYBOOKS.find(p => p.id === id);
+          if (!pb) { results.push({ playbook: id, ok: false, error: 'not found' }); continue; }
+          try {
+            const r = await runPlaybook({
+              playbookPath: pb.file, outDir: RUNS_DIR,
+              varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs,
             });
-          } else {
-            throw new Error(`Unknown tool: "${name}"`);
+            results.push({ playbook: id, title: pb.title, ok: true, jsonPath: r.jsonPath, mdPath: r.mdPath, report: r.report });
+          } catch (e) {
+            results.push({ playbook: id, title: pb.title, ok: false, error: e.message });
           }
         }
+        result = { target: args.target, playbooksRun: results.length, results };
+
+      } else if (name.startsWith(`${PREFIX}_play__`)) {
+        const suffix = name.slice(`${PREFIX}_play__`.length);
+        const pb = PLAYBOOKS.find(p => p.toolName === suffix);
+        if (!pb) throw new Error(`No playbook matched tool "${name}".`);
+        await ensureDir(RUNS_DIR);
+        result = await runPlaybook({
+          playbookPath: pb.file, outDir: RUNS_DIR,
+          varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs,
+        });
+
+      } else if (toolToUses.has(name)) {
+        // Executor tool — dispatch generically through the catalog registry.
+        const uses = toolToUses.get(name);
+        result = await catalog.registry[uses](args.target, args);
+
+      } else {
+        throw new Error(`Unknown tool: "${name}"`);
       }
 
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
-
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     } catch (error) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-        isError: true,
-      };
+      return { content: [{ type: 'text', text: `Error: ${error.message}` }], isError: true };
     }
   });
 
-  // Start
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `MCP Recon Runner v0.6.0 ready — ${ALL_TOOLS.length} tools registered ` +
-    `(${EXECUTOR_TOOLS.length} executor + 3 orchestration + ${PLAYBOOKS.length} playbook)\n`
+    `CyberAgentToolSet (CATS) v${VERSION} ready — ${ALL_TOOLS.length} tools ` +
+    `(${catalog.executors.length} executors + ${PLAYBOOKS.length} playbooks + 4 orchestration)\n`
   );
 }
 

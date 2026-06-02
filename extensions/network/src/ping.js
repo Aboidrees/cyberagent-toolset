@@ -1,7 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { getOSInfo, isCommandAvailable } from '../utils/os.js';
-import { validateTarget } from '../utils/validate.js';
+import { getOSInfo, isCommandAvailable } from '#sdk';
+import { validateTarget } from '#sdk';
 
 const pexecFile = promisify(execFile);
 

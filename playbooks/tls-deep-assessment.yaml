@@ -6,7 +6,7 @@ id: tls-deep-assessment
 title: TLS Deep Assessment
 description: Vulnerability-oriented TLS analysis — protocol support, weak ciphers, chain validation, OCSP, and HSTS.
 vars:
-  target: example.com
+  target: fortmind.qa
   port: 443
 steps:
   - name: Certificate Overview

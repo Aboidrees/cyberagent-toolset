@@ -19,7 +19,9 @@ export async function notify({ report, jsonPath, mdPath } = {}) {
   const genericUrl = process.env.WEBHOOK_URL;
   if (!slackUrl && !genericUrl) return { sent: false, reason: 'no webhook configured' };
 
-  const findings = extractFindings(report);
+  // Prefer the catalog-aware findings the runner already computed; fall back to
+  // generic extraction for reports that lack the rollup.
+  const findings = Array.isArray(report?.findings) ? report.findings : extractFindings(report);
   const counts = severityCounts(findings);
   const top = findings.length ? topSeverity(findings) : null;
 

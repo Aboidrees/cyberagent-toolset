@@ -7,7 +7,7 @@ id: web-basic-recon
 title: Basic Web Recon
 description: Standard reconnaissance — DNS, WHOIS, port scan, and basic HTTP/TLS checks.
 vars:
-  target: example.com
+  target: fortmind.qa
   scheme: https
   topPorts: 1000
 steps:

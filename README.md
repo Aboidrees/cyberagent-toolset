@@ -1,14 +1,14 @@
-# MCP Recon Runner
+# CyberAgentToolSet (CATS)
 
-> Modular, playbook-driven reconnaissance tool for cybersecurity professionals.
-> Works as a standalone CLI **and** as a live MCP server that gives Claude direct access to all recon capabilities.
-> **⚠️ Only test systems you own or have explicit written authorisation to assess. Unauthorised scanning may violate laws and regulations.**
+> * An MCP server + CLI that orchestrates authorized security assessments across the attack lifecycle (reconnaissance · scanning · gaining-access) via installable extensions.
+> * Works as a standalone CLI **and** as a live MCP server that gives Claude direct access to every capability.
+> * **⚠️ Only test systems you own or have explicit written authorisation to assess. Unauthorised scanning may violate laws and regulations.**
 
 ---
 
 ## What it does
 
-MCP Recon Runner orchestrates reconnaissance workflows defined in YAML playbooks. Point it at a target, pick one or more topic-based playbooks, and it runs every check — DNS, WHOIS, port scan, HTTP headers, TLS, subdomain enumeration, and more — then saves structured JSON + Markdown reports (and optional PDF/DOCX).
+CyberAgentToolSet (CATS) orchestrates reconnaissance workflows defined in YAML playbooks. Point it at a target, pick one or more topic-based playbooks, and it runs every check — DNS, WHOIS, port scan, HTTP headers, TLS, subdomain enumeration, and more — then saves structured JSON + Markdown reports (and optional PDF/DOCX).
 
 When the MCP server is running, Claude can drive the entire workflow interactively: list available topics, ask which ones you want, run the selected playbooks, and present findings — all in natural language.
 
@@ -20,10 +20,12 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | ----- | ---------------- |
 | [Installation](docs/installation.md) | Prerequisites, platform-specific setup, dependency install |
 | [Getting Started](docs/getting-started.md) | First recon in under 5 minutes, output explained |
+| [User Guide](docs/user-guide.md) | Scenario-driven walkthrough of every use case |
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
 | [MCP Integration](docs/mcp-integration.md) | MCP server setup, Claude Desktop config, interactive flow |
 | [Playbooks](docs/playbooks.md) | Available playbooks, format reference, variable templating |
 | [Executors](docs/executors.md) | All 23 executors — options, YAML syntax, return shape |
+| [Architecture](docs/architecture.md) | Extension model, catalog, taxonomy, plugin contract |
 | [Creating Playbooks](docs/creating-playbooks.md) | Step-by-step guide to writing custom playbooks |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors, debug tips, performance tuning |
 | [Roadmap](docs/roadmap.md) | Planned executors, features, playbooks, and integrations |
@@ -34,8 +36,8 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/yourusername/mcp-recon-runner.git
-cd mcp-recon-runner
+git clone https://github.com/yourusername/cyberagent-toolset.git
+cd cyberagent-toolset
 npm install
 
 # 2. Run a quick recon
@@ -93,41 +95,33 @@ built in. See [Configuration](docs/configuration.md).
 ## Project structure
 
 ```TREE
-mcp-recon-runner/
+cyberagent-toolset/
 ├── src/
 │   ├── index.js              # CLI entry (run · diff · watch · schedule · report)
-│   ├── mcp-server.js         # MCP server (dynamic tool registration)
+│   ├── mcp-server.js         # MCP server (catalog-driven tool registration)
 │   ├── runner.js             # Playbook engine (parallel steps, findings rollup)
-│   ├── diff.js               # Compare two runs
-│   ├── watch.js              # Run a watchlist of targets
-│   ├── schedule.js           # Cron-scheduled scanning (node-cron)
-│   ├── report.js             # PDF / DOCX / HTML report export
-│   ├── executors/            # One file per recon capability
-│   │   ├── cloud.js          # cloud.bucket_finder (AWS/GCP/Azure)
-│   │   ├── dns.js            # dns.resolve · dns.reverse
-│   │   ├── email.js          # email.security (SPF/DMARC/DKIM/MTA-STS/BIMI)
-│   │   ├── http.js           # headers/get/security_score/waf_detect/fingerprint/cors_check/methods/fuzz_paths/git_leak
-│   │   ├── ip.js             # ip.intel (ASN / IP intelligence)
-│   │   ├── nmap.js
-│   │   ├── ping.js
-│   │   ├── shodan.js         # shodan.host (key-gated)
-│   │   ├── subdomains.js
-│   │   ├── tls.js            # tls.inspect · tls.deep
-│   │   ├── traceroute.js
-│   │   ├── vuln.js           # vuln.cve_lookup (NVD)
-│   │   └── whois.js
-│   └── utils/
-│       ├── findings.js       # Severity-rated findings model
-│       ├── fsx.js            # File system helpers
-│       ├── notify.js         # Webhook / Slack notifications
-│       ├── logger.js         # stderr-safe step logger
-│       ├── os.js             # OS detection + command availability
-│       ├── playbooks.js      # Dynamic playbook loader
-│       └── validate.js       # Input validation (injection prevention)
-├── playbooks/                # Recon playbooks (drop .yaml here to add tools)
-├── docs/                     # Full documentation
+│   ├── sdk.js                # #sdk — shared services extensions build against
+│   ├── diff.js · watch.js · schedule.js · report.js
+│   ├── extensions/
+│   │   └── loader.js         # Discover extensions → build the catalog
+│   └── utils/                # findings · fsx · notify · logger · os · playbooks · validate
+├── extensions/               # Domain modules (each = one installable extension)
+│   ├── dns/  whois/  email/  ip-intel/  threat-intel/     # reconnaissance
+│   ├── network/  web/  tls/                               # scanning (+ web access)
+│   ├── cloud/                                             # gaining-access
+│   └── <domain>/
+│       ├── index.js          # Extension Descriptor (manifest: executors + metadata)
+│       ├── src/*.js          # capability implementations
+│       └── report.js         # owns this domain's findings extraction
+├── playbooks/                # YAML playbooks (drop .yaml here to add tools)
+├── watchlists/               # Target watchlists for `watch`
+├── schemas/                  # JSON Schemas for playbooks/watchlists
+├── docs/                     # Full documentation (see architecture.md)
 └── runs/                     # Auto-generated reports (gitignored)
 ```
+
+Third-party extensions install as npm packages named `cyberagent-ext-*` and
+auto-register — see [Architecture](docs/architecture.md).
 
 ---
 

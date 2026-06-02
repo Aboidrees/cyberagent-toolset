@@ -6,48 +6,10 @@ import { timestampFile } from './utils/fsx.js';
 import { logStep } from './utils/logger.js';
 import { extractFindings, severityCounts, topSeverity } from './utils/findings.js';
 import { notify } from './utils/notify.js';
+import { loadCatalog } from './extensions/loader.js';
 
-// Import executors
-import * as dnsExec from './executors/dns.js';
-import * as whoisExec from './executors/whois.js';
-import * as nmapExec from './executors/nmap.js';
-import * as httpExec from './executors/http.js';
-import * as tlsExec from './executors/tls.js';
-import * as subsExec from './executors/subdomains.js';
-import * as pingExec from './executors/ping.js';
-import * as tracerouteExec from './executors/traceroute.js';
-import * as emailExec from './executors/email.js';
-import * as ipExec from './executors/ip.js';
-import * as vulnExec from './executors/vuln.js';
-import * as shodanExec from './executors/shodan.js';
-import * as cloudExec from './executors/cloud.js';
-
-// Registry mapping playbook 'uses' strings to executor functions
-const registry = {
-  'dns.resolve': dnsExec.resolveDNS,
-  'dns.reverse': dnsExec.reverseDNS,
-  'whois.lookup': whoisExec.lookupWhois,
-  'nmap.scan': nmapExec.scanNmap,
-  'http.headers': httpExec.getHeaders,
-  'http.get': httpExec.getPath,
-  'http.security_score': httpExec.securityScore,
-  'http.waf_detect': httpExec.wafDetect,
-  'http.fingerprint': httpExec.fingerprint,
-  'http.fuzz_paths': httpExec.fuzzPaths,
-  'http.git_leak': httpExec.gitLeak,
-  'http.cors_check': httpExec.corsCheck,
-  'http.methods': httpExec.methods,
-  'tls.inspect': tlsExec.inspectTLS,
-  'tls.deep': tlsExec.deepTLS,
-  'subdomains.passive': subsExec.passive,
-  'network.ping': pingExec.ping,
-  'network.traceroute': tracerouteExec.traceroute,
-  'email.security': emailExec.security,
-  'ip.intel': ipExec.intel,
-  'vuln.cve_lookup': vulnExec.cveLookup,
-  'shodan.host': shodanExec.hostLookup,
-  'cloud.bucket_finder': cloudExec.bucketFinder
-};
+// The executor registry is built from the extension catalog (local extensions/
+// + npm cyberagent-ext-* plugins), not hardcoded here.
 
 // Replace templates like {{vars.target}} with values from context
 function applyTemplate(str, ctx) {
@@ -103,6 +65,7 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
     content = parsed.content;
   }
 
+  const catalog = await loadCatalog();
   const ctx = { vars: { ...(fm.vars || {}), ...varOverrides } };
   const steps = fm.steps || [];
   const outputs = new Array(steps.length);
@@ -111,8 +74,10 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
 
   // Execute one step and return its output object (caller controls ordering).
   const runStep = async (step, i) => {
-    const stepCtx = deepTemplate(step, { ...ctx, content, fm });
-    const fn = registry[stepCtx.uses];
+    // `env` is exposed so playbooks can reference keys, e.g.
+    // `apiKey: "{{env.SHODAN_API_KEY}}"`.
+    const stepCtx = deepTemplate(step, { ...ctx, env: process.env, content, fm });
+    const fn = catalog.registry[stepCtx.uses];
     if (!fn) {
       return { name: stepCtx.name, uses: stepCtx.uses, error: `Unknown executor` };
     }
@@ -147,7 +112,7 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
 
   // Aggregate severity-rated findings across all steps for the executive summary,
   // risk matrix, and webhook notifications.
-  const findings = extractFindings(report);
+  const findings = extractFindings(report, catalog.reportersByUses);
   const counts = severityCounts(findings);
   report.findings = findings;
   report.severityCounts = counts;

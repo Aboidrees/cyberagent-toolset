@@ -20,7 +20,7 @@ A playbook is pure YAML with three required keys (`id`, `title`, `description`)
 plus optional `vars` and a list of `steps`:
 
 ```yaml
-id: my-recon                 # required · used as MCP tool name: recon_play__my_recon
+id: my-recon                 # required · used as MCP tool name: cats_play__my_recon
 title: My Recon Playbook     # required · shown in reports and MCP tool list
 description: One-line summary shown in the MCP tool listing and reports.
 vars:
@@ -58,7 +58,7 @@ whose name starts with `_` (like `_template.yaml`) are skipped by the loader.
 node src/index.js -p playbooks/my-recon.yaml --target example.com
 ```
 
-For MCP, restart Claude Desktop and the playbook will appear in `recon_topics`.
+For MCP, restart Claude Desktop and the playbook will appear in `cats_topics`.
 
 ---
 
@@ -190,41 +190,57 @@ steps:
 
 ---
 
-## Adding a custom executor
+## Adding a custom executor (extension)
 
-If the built-in executors don't cover your use case:
+Executors live in **extensions** — domain modules the engine discovers
+automatically. To add one, create a new extension (or add an executor to an
+existing domain). See [Architecture](architecture.md) for the full contract.
 
-1. Create `src/executors/mytool.js`:
+**1. Create the implementation** `extensions/mytool/src/run.js`:
 
 ```javascript
+import { validateTarget } from '#sdk';   // shared services (also injected as ctx)
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { validateTarget } from '../utils/validate.js';
-
 const pexecFile = promisify(execFile);
 
 export async function myAction(target, opts = {}) {
   const cleanTarget = validateTarget(target);
-  const args = ['--some-flag', cleanTarget];
-  const { stdout } = await pexecFile('mytool', args, {
+  const { stdout } = await pexecFile('mytool', ['--some-flag', cleanTarget], {
     timeout: opts.timeoutMs || 30000,
   });
   return { target: cleanTarget, raw: stdout };
 }
 ```
 
-1. Register it in `src/runner.js`:
+**2. Declare it in the descriptor** `extensions/mytool/index.js`:
 
 ```javascript
-import * as myToolExec from './executors/mytool.js';
+import { myAction } from './src/run.js';
 
-const registry = {
-  // ... existing entries
-  'mytool.action': myToolExec.myAction,
+export default {
+  name: 'mytool',
+  version: '1.0.0',
+  domain: 'mytool',
+  description: 'What this extension does.',
+  permissions: { network: [], env: [], bins: ['mytool'] },
+  executors: [
+    {
+      uses: 'mytool.action',          // stable logical id used in playbooks
+      phase: 'scanning',              // reconnaissance | scanning | gaining-access
+      posture: 'active',              // passive | active
+      targetTypes: ['domain', 'ip'],
+      summary: 'One-line summary shown in the MCP tool description.',
+      run: myAction,
+      inputSchema: { target: { type: 'string' }, timeoutMs: { type: 'number' } },
+    },
+  ],
+  // Optional: own your findings extraction.
+  // report: { findings: (output) => [{ severity: 'high', message: '...' }] },
 };
 ```
 
-1. Use it in a playbook:
+**3. Use it in a playbook** — no registration, no code changes:
 
 ```yaml
 - name: My Custom Check
@@ -233,4 +249,15 @@ const registry = {
     timeoutMs: 20000
 ```
 
-> Always use `execFile` (not `exec`) and call `validateTarget` at the top of every executor. See [Security considerations](troubleshooting.md#security-notes) for why this matters.
+Restart the MCP server (or re-run the CLI) and it auto-registers as
+`cats_mytool_action` and appears in `cats_capabilities`.
+
+### Shipping it as an installable plugin
+
+Publish the same descriptor as an npm package named `cyberagent-ext-mytool`
+(default-export the descriptor from its `main`). Anyone who `npm install`s it gets
+the executor automatically — the loader discovers `cyberagent-ext-*` packages.
+Plugins use the injected `ctx` (e.g. `ctx.validateTarget`) instead of `#sdk`.
+
+> Always use `execFile` (not `exec`) and `validateTarget` at the top of every
+> executor. See [Security considerations](troubleshooting.md#security-notes).

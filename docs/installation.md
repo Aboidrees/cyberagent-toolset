@@ -55,12 +55,12 @@ Pre-installed on all platforms. No action needed.
 
 ---
 
-## Install MCP Recon Runner
+## Install CyberAgentToolSet (CATS)
 
 ```bash
 # Clone
-git clone https://github.com/yourusername/mcp-recon-runner.git
-cd mcp-recon-runner
+git clone https://github.com/yourusername/cyberagent-toolset.git
+cd cyberagent-toolset
 
 # Install Node dependencies
 npm install
@@ -79,8 +79,8 @@ node src/index.js --help
 # Check the MCP server starts
 npm run mcp
 # Expected output:
-# Loaded 7 playbooks: ...
-# MCP Recon Runner v0.3.0 ready — 19 tools registered
+# Loaded 9 extensions (23 executors), 13 playbooks
+# CyberAgentToolSet (CATS) v0.7.0 ready — 40 tools
 ```
 
 Press `Ctrl+C` to stop the MCP server.

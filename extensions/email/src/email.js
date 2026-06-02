@@ -1,6 +1,6 @@
 import dns from 'dns/promises';
 import axios from 'axios';
-import { validateTarget } from '../utils/validate.js';
+import { validateTarget } from '#sdk';
 
 // DKIM selectors worth probing by default — covers the common providers.
 const DEFAULT_SELECTORS = [

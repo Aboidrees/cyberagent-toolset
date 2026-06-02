@@ -312,8 +312,8 @@ steps:
 Integration with the Claude Desktop scheduled tasks system — run a playbook against a target on a cron schedule and get notified when new findings appear.
 
 ```bash
-# Run quick-web-recon on fortmind.qa every Monday at 08:00
-npm run schedule -- --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"
+# Run quick-web-recon on example.com every Monday at 08:00
+npm run schedule -- --playbook quick-web-recon --target example.com --cron "0 8 * * 1"
 ```
 
 ### Diff reports
@@ -331,9 +331,9 @@ Define a list of targets and playbooks in a YAML file and run the full batch in 
 ```yaml
 # watchlist.yml
 targets:
-  - host: fortmind.qa
+  - host: example.com
     playbooks: [quick-web-recon, web-security-recon]
-  - host: api.fortmind.qa
+  - host: api.example.com
     playbooks: [api-cloud-recon]
 ```
 
@@ -368,7 +368,7 @@ NOTIFY_ON_SEVERITY=high,critical
 Package and share executors as npm plugins. Install a community executor with one command:
 
 ```bash
-npm install mcp-recon-executor-nikto
+npm install cyberagent-executor-nikto
 ```
 
 It auto-registers in `runner.js` and appears in the MCP tool list.

@@ -1,6 +1,6 @@
 import tls from 'tls';
 import https from 'https';
-import { validateTarget } from '../utils/validate.js';
+import { validateTarget } from '#sdk';
 
 /**
  * Inspect TLS certificate and cipher information for a target host.

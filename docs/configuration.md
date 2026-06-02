@@ -75,8 +75,11 @@ The `runs/` directory is gitignored — reports are never committed to source co
 
 ## Environment variables
 
-Create a `.env` file in the project root (it is gitignored). Everything is
-optional — the tool runs fully keyless. See `.env.example` for the full list.
+Copy `.env.example` to `.env` in the project root (it is gitignored). The `.env`
+file is **loaded automatically** at startup — by both the CLI and the MCP server,
+and for both built-in and npm-installed extensions — so keys work out of the box.
+Real shell environment variables always take precedence over `.env`. Everything is
+optional; the tool runs fully keyless.
 
 ```bash
 # .env
@@ -96,6 +99,16 @@ NVD_API_KEY=your_key_here                # vuln.cve_lookup rate-limit boost (opt
 All built-in executors work without keys; the keys above only enable extra
 enrichment or integrations.
 
+You can also reference env vars inside a playbook step with `{{env.NAME}}`, e.g.
+pass a key explicitly:
+
+```yaml
+- name: Shodan Host Data
+  uses: shodan.host
+  with:
+    apiKey: "{{env.SHODAN_API_KEY}}"
+```
+
 ---
 
 ## CLI commands
@@ -104,7 +117,7 @@ Beyond the default `run` command, the CLI exposes scale-and-automation commands:
 
 ```bash
 # Run a playbook (default command — the bare form still works)
-node src/index.js -p playbooks/quick-web-recon.yaml --target fortmind.qa
+node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
 
 # Diff two runs — exits non-zero when something changed (handy for monitoring)
 node src/index.js diff runs/old.json runs/new.json [--out diff.md]
@@ -113,7 +126,7 @@ node src/index.js diff runs/old.json runs/new.json [--out diff.md]
 node src/index.js watch --list watchlists/example.yaml [--out ./runs]
 
 # Run a playbook on a cron schedule (long-running; new findings fire webhooks)
-node src/index.js schedule --playbook quick-web-recon --target fortmind.qa \
+node src/index.js schedule --playbook quick-web-recon --target example.com \
   --cron "0 8 * * 1" [--now]
 
 # Export a run to a professional report

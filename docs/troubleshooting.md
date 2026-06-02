@@ -162,7 +162,7 @@ Error: traceroute not available on this system. Install the traceroute package.
 
 1. Verify the path in `claude_desktop_config.json` is the **absolute** path to `src/mcp-server.js`.
 2. Test it manually: `node /absolute/path/to/src/mcp-server.js`
-   - Expected stderr: `Loaded 7 playbooks ... MCP Recon Runner v0.3.0 ready`
+   - Expected stderr: `Loaded 9 extensions (23 executors), 13 playbooks`
 3. Check Claude Desktop logs on macOS: `~/Library/Logs/Claude/`
 
 ### "Cannot find module" on MCP server start

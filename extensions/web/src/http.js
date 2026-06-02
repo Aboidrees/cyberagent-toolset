@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { validateTarget } from '../utils/validate.js';
+import { validateTarget } from '#sdk';
 
 /**
  * Build a URL from scheme, host, and path.

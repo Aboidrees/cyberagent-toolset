@@ -7,7 +7,7 @@ id: web-security-recon
 title: Web Application Security Reconnaissance
 description: Security-focused assessment — exposed files, admin panels, framework leaks, and information disclosure.
 vars:
-  target: example.com
+  target: fortmind.qa
   scheme: https
   timeout: 10000
   userAgent: Mozilla/5.0 (compatible; SecurityBot/1.0)

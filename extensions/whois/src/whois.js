@@ -1,5 +1,5 @@
 import whois from 'whois-json';
-import { validateTarget } from '../utils/validate.js';
+import { validateTarget } from '#sdk';
 
 /**
  * Perform a WHOIS lookup for a domain or IP address.

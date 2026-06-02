@@ -1,14 +1,26 @@
 {
-  "name": "mcp-recon-runner",
-  "version": "0.6.0",
+  "name": "cyberagent-toolset",
+  "version": "0.7.0",
+  "description": "CyberAgentToolSet (CATS) — an MCP server + CLI that orchestrates authorized security assessments across the attack lifecycle via installable extensions.",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
   },
   "bin": {
-    "mcp-recon": "./src/index.js",
-    "mcp-recon-server": "./src/mcp-server.js"
+    "cyberagent": "./src/index.js",
+    "cyberagent-mcp": "./src/mcp-server.js"
   },
+  "imports": {
+    "#sdk": "./src/sdk.js"
+  },
+  "keywords": [
+    "mcp",
+    "security",
+    "reconnaissance",
+    "pentest",
+    "cyberagent",
+    "cyberagent-toolset"
+  ],
   "scripts": {
     "mcp": "node ./src/mcp-server.js",
     "start": "node ./src/index.js",
@@ -18,7 +30,7 @@
     "recon:security": "node ./src/index.js -p ./playbooks/web-security-recon.yaml",
     "recon:api": "node ./src/index.js -p ./playbooks/api-cloud-recon.yaml",
     "recon:quick": "node ./src/index.js -p ./playbooks/quick-web-recon.yaml",
-    "test:nmap": "node ./src/index.js -p ./playbooks/nmap-cheat-sheet.yaml",
+    "selftest": "node ./src/index.js -p ./playbooks/all-tools-selftest.yaml",
     "test:network": "node ./src/index.js -p ./playbooks/network-connectivity-test.yaml",
     "diff": "node ./src/index.js diff",
     "watch": "node ./src/index.js watch",
@@ -30,6 +42,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "axios": "^1.7.2",
     "docx": "^9.7.1",
+    "dotenv": "^17.4.2",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
     "node-cron": "^4.2.1",

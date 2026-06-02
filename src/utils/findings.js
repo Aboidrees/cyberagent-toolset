@@ -1,10 +1,11 @@
 /**
  * Shared findings model.
  *
- * Normalises the heterogeneous executor outputs (each executor returns its own
- * shape) into a single flat list of severity-rated findings. Reused by the
- * report builder, webhook notifications, and diff reports so they all agree on
- * what counts as a "finding" and how severe it is.
+ * Normalises heterogeneous executor outputs into one flat, severity-rated list.
+ * Generic `data.findings[]` handling lives here; domain-specific extraction is
+ * owned by each extension's `report.findings(stepOutput)` and delegated to via
+ * the `reportersByUses` map (built by the extension loader). This keeps the core
+ * thin and lets third-party extensions emit findings without patching it.
  */
 
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'];
@@ -14,9 +15,7 @@ const SEV_RANK = { critical: 4, high: 3, medium: 2, low: 1, info: 0, none: -1, u
 export function normalizeSeverity(s) {
   if (!s) return 'info';
   const x = String(s).toLowerCase();
-  if (SEVERITIES.includes(x)) return x;
-  if (x === 'critical') return 'critical';
-  return 'info';
+  return SEVERITIES.includes(x) ? x : 'info';
 }
 
 /** Numeric rank for sorting / threshold comparisons (higher = worse). */
@@ -26,49 +25,37 @@ export function severityRank(s) {
 
 /**
  * Extract a flat, severity-sorted findings list from a run report's outputs.
- * Understands the per-executor shapes that carry security signal.
+ *
+ * @param report             a run report ({ outputs: [...] })
+ * @param reportersByUses    optional `uses` → { findings(stepOutput) } map from
+ *                           the extension catalog. When omitted, only generic
+ *                           `data.findings[]` arrays are collected.
  */
-export function extractFindings(report) {
+export function extractFindings(report, reportersByUses = {}) {
   const findings = [];
   const push = (step, uses, severity, message) =>
     findings.push({ step, uses, severity: normalizeSeverity(severity), message });
 
   for (const o of report?.outputs || []) {
     if (!o || !o.ok || !o.data) continue;
-    const d = o.data;
 
-    // Generic findings arrays: email.security, tls.deep, http.cors_check, http.methods, ip.intel
-    if (Array.isArray(d.findings)) {
-      for (const f of d.findings) {
+    // Generic: any executor may return a `findings: [{severity, message}]` array.
+    if (Array.isArray(o.data.findings)) {
+      for (const f of o.data.findings) {
         push(o.name, o.uses, f.severity, f.message || f.check || JSON.stringify(f));
       }
     }
 
-    switch (o.uses) {
-      case 'vuln.cve_lookup':
-        for (const c of d.results || []) {
-          push(o.name, o.uses, c.severity, `${c.id} (CVSS ${c.cvss}) — ${(c.description || '').slice(0, 140)}`);
+    // Domain-specific: delegate to the owning extension's report module.
+    const reporter = reportersByUses[o.uses];
+    if (reporter && typeof reporter.findings === 'function') {
+      try {
+        for (const f of reporter.findings(o) || []) {
+          push(o.name, o.uses, f.severity, f.message);
         }
-        break;
-      case 'http.git_leak':
-        if (d.exposed) push(o.name, o.uses, 'critical', d.note || 'Exposed .git directory');
-        break;
-      case 'cloud.bucket_finder':
-        for (const b of d.exposed || []) {
-          push(o.name, o.uses, b.severity, `Public bucket: ${b.url} (${b.access})`);
-        }
-        break;
-      case 'http.security_score':
-        if (['D', 'E', 'F'].includes(d.grade)) {
-          push(o.name, o.uses, d.grade === 'F' ? 'high' : 'medium', `Security header grade ${d.grade} (${d.score}%)`);
-        }
-        for (const leak of d.infoLeaks || []) push(o.name, o.uses, 'low', leak);
-        break;
-      case 'shodan.host':
-        for (const v of d.vulns || []) push(o.name, o.uses, 'high', `Shodan-reported CVE: ${v}`);
-        break;
-      default:
-        break;
+      } catch {
+        // a misbehaving extension reporter must not break the run report
+      }
     }
   }
 
@@ -83,7 +70,7 @@ export function severityCounts(findings) {
   return counts;
 }
 
-/** Highest severity present, or null if there are no findings. */
+/** Highest severity present, or 'info' if there are no findings. */
 export function topSeverity(findings) {
   return findings.reduce((top, f) =>
     severityRank(f.severity) > severityRank(top) ? f.severity : top, 'info');

@@ -52,7 +52,8 @@ function extractFacts(report) {
     }
   }
 
-  for (const f of extractFindings(report)) facts.findings.add(`${f.severity}|${f.message}`);
+  const findingsList = Array.isArray(report?.findings) ? report.findings : extractFindings(report);
+  for (const f of findingsList) facts.findings.add(`${f.severity}|${f.message}`);
   return facts;
 }
 

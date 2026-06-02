@@ -1,6 +1,6 @@
 import dns from 'dns/promises';
 import axios from 'axios';
-import { validateTarget } from '../utils/validate.js';
+import { validateTarget } from '#sdk';
 
 const IPV4_PLAIN_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
 
