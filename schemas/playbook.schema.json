@@ -4,7 +4,11 @@
   "title": "mcp-recon-runner playbook",
   "description": "A reconnaissance playbook: id/title/description plus default vars and an ordered list of steps.",
   "type": "object",
-  "required": ["id", "title", "description"],
+  "required": [
+    "id",
+    "title",
+    "description"
+  ],
   "additionalProperties": false,
   "properties": {
     "id": {
@@ -24,7 +28,11 @@
       "type": "object",
       "description": "Default variable values; reference with {{vars.name}} and override at runtime.",
       "additionalProperties": {
-        "type": ["string", "number", "boolean"]
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
       }
     },
     "steps": {
@@ -32,7 +40,10 @@
       "description": "Ordered list of steps. Each names an executor via `uses` and passes options under `with`.",
       "items": {
         "type": "object",
-        "required": ["name", "uses"],
+        "required": [
+          "name",
+          "uses"
+        ],
         "additionalProperties": false,
         "properties": {
           "name": {
@@ -43,29 +54,46 @@
             "type": "string",
             "description": "Executor to run.",
             "enum": [
+              "censys.host",
+              "cloud.bucket_finder",
+              "dns.caa",
+              "dns.dnssec",
               "dns.resolve",
               "dns.reverse",
-              "whois.lookup",
-              "nmap.scan",
-              "http.headers",
-              "http.get",
-              "http.security_score",
-              "http.waf_detect",
-              "http.fingerprint",
-              "http.cors_check",
-              "http.methods",
-              "http.fuzz_paths",
-              "http.git_leak",
-              "tls.inspect",
-              "tls.deep",
-              "subdomains.passive",
               "email.security",
+              "github.leaks",
+              "http.cookies",
+              "http.cors_check",
+              "http.fingerprint",
+              "http.fuzz_paths",
+              "http.get",
+              "http.git_leak",
+              "http.headers",
+              "http.methods",
+              "http.open_redirect",
+              "http.robots",
+              "http.secrets",
+              "http.security_score",
+              "http.subdomain_takeover",
+              "http.waf_detect",
               "ip.intel",
-              "vuln.cve_lookup",
-              "shodan.host",
-              "cloud.bucket_finder",
+              "network.banner",
               "network.ping",
-              "network.traceroute"
+              "network.traceroute",
+              "nmap.os",
+              "nmap.scan",
+              "nmap.udp",
+              "nuclei.scan",
+              "securitytrails.dns_history",
+              "securitytrails.subdomains",
+              "shodan.host",
+              "subdomains.bruteforce",
+              "subdomains.passive",
+              "tls.deep",
+              "tls.inspect",
+              "vuln.cve_lookup",
+              "web.wayback",
+              "whois.lookup"
             ]
           },
           "parallel": {

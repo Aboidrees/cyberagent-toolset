@@ -88,6 +88,20 @@ can also pass a key per step: `with: { apiKey: "{{env.SHODAN_API_KEY}}" }`.
 
 ---
 
+## Scenario 2b — Nuclei (thousands of templated checks)
+
+`nuclei.scan` wraps the Nuclei engine. Install the binary, then it runs as part of
+any playbook (or directly via the MCP `cats_nuclei_scan` tool):
+
+```bash
+brew install nuclei
+node src/index.js -p playbooks/vulnerability-assessment.yaml --target example.com
+```
+
+Without the binary it is a no-op note, so it never breaks a run.
+
+---
+
 ## Scenario 3 — Passive-only (limited authorization)
 
 When you only have OSINT authorization, run a passive playbook (no packets reach

@@ -4,19 +4,19 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 ---
 
-## Current state — v0.6.0
+## Current state — v0.8.0
 
 | Area | Status |
 | ------ | -------- |
-| 8 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute) | ✅ Done |
-| 7 Phase 1 executors (dns.reverse, email.security, ip.intel, http.security_score, http.waf_detect, http.fingerprint, tls.deep) | ✅ Done |
-| 7 Phase 2 executors (vuln.cve_lookup, shodan.host, cloud.bucket_finder, http.fuzz_paths, http.git_leak, http.cors_check, http.methods) | ✅ Done |
-| Phase 3 scale & automation (parallel steps, scheduling, diff, watchlist, PDF/DOCX/HTML export, webhooks) | ✅ Done |
-| MCP server with dynamic playbook-driven tool registration (23 executor tools) | ✅ Done |
+| **40 executors across 13 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
+| **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
+| **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
+| MCP server with catalog-driven tool registration (57 tools) + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
-| 12 production playbooks (incl. email-security, tls-deep, web-headers, vulnerability, owasp-top10, cloud-security) | ✅ Done |
+| 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
-| Full documentation suite | ✅ Done |
+| Full documentation suite + user guide + GitHub wiki source | ✅ Done |
 
 ---
 
@@ -37,7 +37,7 @@ detailed spec below.
 | Email security (DMARC/DKIM/SPF/MTA-STS/BIMI) | `email.security` | ✅ | — |
 | ASN / IP intelligence (abuse reputation key-gated) | `ip.intel` | ✅ | — |
 | Shodan host data (key-gated) | `shodan.host` | ✅ | — |
-| Passive DNS history | `securitytrails.*` | ⬜ | P4 |
+| Passive DNS history | `securitytrails.*` | ✅ | — |
 
 ### LIVENESS
 
@@ -52,8 +52,8 @@ detailed spec below.
 | ----- | -------- | ------ | ----- |
 | TCP connect + version scan | `nmap.scan` | ✅ | — |
 | CVE lookup from service versions | `vuln.cve_lookup` | ✅ | — |
-| UDP scan | `nmap.scan` (via `-sU`, root) | ⬜ | P2 |
-| OS fingerprint | `nmap.scan` (via `-O`, root) | ⬜ | P2 |
+| UDP scan | `nmap.udp` (root) | ✅ | — |
+| OS fingerprint | `nmap.os` (root) | ✅ | — |
 
 ### WEBSCANNER  *(active)*
 
@@ -77,9 +77,9 @@ detailed spec below.
 | Git repo leak detector | `http.git_leak` | ✅ | — |
 | Directory / path fuzzer | `http.fuzz_paths` | ✅ | — |
 | Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
-| Nuclei template scan | `nuclei.scan` | ⬜ | P4 |
+| Nuclei template scan | `nuclei.scan` | ✅ | — |
 
-**Today: 23 checks live ✅ · ~4 planned ⬜.** The `task_type` enum stays at four
+**Today: 40 executors live** across 13 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.
