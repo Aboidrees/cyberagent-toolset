@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { validateTarget, validateNmapFlags } from '../utils/validate.js';
+import { validateTarget, validateNmapFlags } from '#sdk';
 
 const pexecFile = promisify(execFile);
 

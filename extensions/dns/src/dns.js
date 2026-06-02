@@ -1,5 +1,5 @@
 import dns from 'dns/promises';
-import { validateTarget } from '../utils/validate.js';
+import { validateTarget } from '#sdk';
 
 // Matches a bare IPv4 address (no CIDR suffix).
 const IPV4_PLAIN_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
