@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.13.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.14.0
  *
  * Tools are generated dynamically from two sources:
  *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
@@ -22,6 +22,11 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,8 +40,10 @@ import {
 } from './assessment.js';
 import { suggest }       from './pivots.js';
 import { synthesize }    from './assessment-report.js';
+import { listResources, listResourceTemplates, readResource } from './mcp-resources.js';
+import { PROMPTS, getPrompt } from './mcp-prompts.js';
 
-const VERSION = '0.13.0';
+const VERSION = '0.14.0';
 const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
@@ -167,6 +174,22 @@ function buildOrchestrationTools(playbooks) {
         required: ['assessmentId'],
       },
     },
+    {
+      name: `${PREFIX}_execute`,
+      description:
+        'Run any single executor by its `uses` key (e.g. "dns.resolve", "smb.probe"). Discover the ' +
+        'available keys via cats_capabilities. This one tool covers all executors — useful in lean ' +
+        'tool mode where the per-executor tools are not exposed.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          uses:   { type: 'string', description: 'Executor uses key (from cats_capabilities)' },
+          target: { type: 'string', description: 'Target host/domain/ip/url' },
+          opts:   { type: 'object', description: 'Executor options (its `with` block)' },
+        },
+        required: ['uses', 'target'],
+      },
+    },
   ];
 }
 
@@ -199,18 +222,31 @@ async function main() {
   // Reverse map: tool name -> uses key, for dispatch.
   const toolToUses = new Map(catalog.executors.map(e => [usesToTool(e.uses), e.uses]));
 
+  // Tool surface: "full" exposes one tool per executor (default); "lean" hides the
+  // 56 granular executor tools so agent tool-choice stays sharp — executors are
+  // still reachable via cats_execute + discoverable via cats_capabilities.
+  const lean = (process.env.CATS_TOOL_MODE || 'full').toLowerCase() === 'lean';
   const ALL_TOOLS = [
-    ...buildExecutorTools(catalog),
+    ...(lean ? [] : buildExecutorTools(catalog)),
     ...buildOrchestrationTools(PLAYBOOKS),
     ...buildPlaybookTools(PLAYBOOKS),
   ];
 
   const server = new Server(
     { name: 'cyberagent-toolset', version: VERSION },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {}, resources: {}, prompts: {} } }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
+
+  // ── Resources: capabilities + saved assessments (readable state) ────────────
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: await listResources(catalog) }));
+  server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({ resourceTemplates: listResourceTemplates() }));
+  server.setRequestHandler(ReadResourceRequestSchema, async (req) => readResource(req.params.uri, { catalog }));
+
+  // ── Prompts: one-click agent workflows ──────────────────────────────────────
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: PROMPTS }));
+  server.setRequestHandler(GetPromptRequestSchema, async (req) => getPrompt(req.params.name, req.params.arguments || {}));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
@@ -308,6 +344,12 @@ async function main() {
           varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs, posture: args.passive ? "passive" : undefined,
         });
 
+      } else if (name === `${PREFIX}_execute`) {
+        // Generic executor runner — run any `uses` key (the lean-mode entry point).
+        const run = catalog.registry[args.uses];
+        if (!run) throw new Error(`Unknown executor "${args.uses}". See cats_capabilities for valid keys.`);
+        result = await run(args.target, { target: args.target, ...(args.opts || {}) });
+
       } else if (toolToUses.has(name)) {
         // Executor tool — dispatch generically through the catalog registry.
         const uses = toolToUses.get(name);
@@ -326,8 +368,9 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `CyberAgentToolSet (CATS) v${VERSION} ready — ${ALL_TOOLS.length} tools ` +
-    `(${catalog.executors.length} executors + ${PLAYBOOKS.length} playbooks + ${ALL_TOOLS.length - catalog.executors.length - PLAYBOOKS.length} orchestration)\n`
+    `CyberAgentToolSet (CATS) v${VERSION} ready — ${ALL_TOOLS.length} tools` +
+    `${lean ? ' (lean mode)' : ` (${catalog.executors.length} executors + ${PLAYBOOKS.length} playbooks + ${ALL_TOOLS.length - catalog.executors.length - PLAYBOOKS.length} orchestration)`}` +
+    `, ${PROMPTS.length} prompts, resources on\n`
   );
 }
 
