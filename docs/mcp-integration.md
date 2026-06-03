@@ -182,7 +182,7 @@ One-click agent workflows (surfaced as slash-style prompts in MCP clients):
 ## Lean tool mode
 
 Many MCP clients pick tools better with a smaller surface. Set
-`CATS_TOOL_MODE=lean` to hide the 56 per-executor tools (78 → 22): the agent
+`CATS_TOOL_MODE=lean` to hide the 60 per-executor tools (82 → 22): the agent
 discovers executors via `cats_capabilities` and runs any of them via
 `cats_execute`, while the assessment verbs (`cats_assess_*`) and playbook tools
 stay front-and-center.
@@ -212,8 +212,8 @@ The new playbook automatically appears as a tool (`cats_play__<id>`) and in the 
 ```bash
 npm run mcp
 # stderr output:
-# Loaded 18 extensions (56 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.14.0 ready — 78 tools, 4 prompts, resources on
+# Loaded 22 extensions (60 executors), 13 playbooks
+# CyberAgentToolSet (CATS) v0.16.0 ready — 82 tools, 4 prompts, resources on
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null

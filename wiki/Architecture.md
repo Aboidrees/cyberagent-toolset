@@ -12,7 +12,7 @@ stays stable so playbooks never churn):
 | ---- | ------ |
 | **phase** | `reconnaissance` · `scanning` · `gaining-access` (*maintaining-access* / *covering-tracks* reserved, unused) |
 | **posture** | `passive` (no packets to target) · `active` |
-| **domain** | dns · whois · rdap · email · ip-intel · threat-intel · securitytrails · censys · github-leaks · hunter · network · web · tls · ssh · smb · snmp · cloud · nuclei |
+| **domain** | dns · whois · rdap · email · ip-intel · threat-intel · securitytrails · censys · github-leaks · hunter · network · web · tls · ssh · smb · snmp · mysql · postgres · rdp · ldap · cloud · nuclei |
 | **targetTypes** | domain · ip · cidr · url · email |
 
 ## Domain-first layout

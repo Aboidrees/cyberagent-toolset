@@ -4,14 +4,15 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.15.0
+## Current state — v0.16.0
 
 | Area | Status |
 | ------ | -------- |
-| **56 executors across 18 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| **60 executors across 22 extensions** (recon · scanning · gaining-access) | ✅ Done |
 | **Phase 9 — agent-driven assessments**: stateful sessions + entity graph + pivot engine + correlated report synthesis (`cats_assess_*` + `assess` CLI) | ✅ Done |
 | **Phase 10 — agent-native MCP surface**: MCP Resources + Prompts, lean tool mode + `cats_execute`, assessment eval harness | ✅ Done |
 | **Phase 11 — target diagnostics**: assessment preflight (`reachability`) + report diagnostics — explicit reason for an empty/dead target; eval skips unresolvable targets | ✅ Done |
+| **Phase 12 — backlog completion**: +4 service probes (mysql/postgres/rdp/ldap); auth-aware scanning; MCP resource subscriptions; LLM-in-the-loop eval framework | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
@@ -19,7 +20,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 | **Phase 6 expansion**: `vuln.epss`, `http.graphql`, `dns.txt_fingerprint` | ✅ Done |
 | **Phase 7 expansion**: `rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit` (+ `rdap`/`ssh` extensions) | ✅ Done |
 | **Phase 8 expansion + hardening**: `smb.probe`, `snmp.probe`, `cloud.bucket_objects`, `web.screenshot`, `hunter.emails` (+ `smb`/`snmp`/`hunter` extensions); runtime permission enforcement + `permissions` command; extension-starter template; npm-publish readiness | ✅ Done |
-| MCP server with catalog-driven tool registration (78 tools) + MCP resources & prompts + `cats_capabilities` | ✅ Done |
+| MCP server with catalog-driven tool registration (82 tools) + MCP resources & prompts + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
@@ -34,8 +35,8 @@ bare scanner like Nuclei (which it *wraps*, as one of 56 executors) is being the
 agent-driven orchestration layer. Phase 9 landed the keystone (assessments +
 pivots). Remaining moves, in that spirit:
 
-- **LLM-in-the-loop evals** — the Phase 10 eval guards the engine deterministically (`npm run eval`); add scored runs where a *live agent* drives the assessment and is judged on tool-choice + report quality.
-- **Resource subscriptions** — push assessment updates to the client as the investigation progresses (MCP `resources/updated`).
+- **LLM-in-the-loop evals (scored)** — Phase 12 shipped the framework + heuristic baseline (`npm run eval:llm`); wire a live agent (API key) and a sharper judge.
+- **Web dashboard** — local UI to browse/diff runs and trigger assessments (in progress).
 - **More tools** — service probes (LDAP, RDP, MySQL/Postgres banner), more cloud providers, screenshot-into-report embedding; more key-gated providers.
 - **Ecosystem** — publish `cyberagent-toolset` + a reference `cyberagent-ext-*` to npm (package is publish-ready: run `npm publish`).
 - **Bigger features** — local web dashboard for browsing/diffing runs; authentication-aware scanning.
@@ -103,7 +104,7 @@ detailed spec below.
 | Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
 | Nuclei template scan | `nuclei.scan` | ✅ | — |
 
-**Today: 56 executors live** across 18 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
+**Today: 60 executors live** across 22 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.

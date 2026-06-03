@@ -734,6 +734,29 @@ The following executors were added across the Phase 4–7 expansions. Keyless un
 | ------ | --------------- | ------- | ------- |
 | `snmp.probe` | scanning · active | `port`, `communities[]`, `timeoutMs` | `{ communitiesTried, open[], sysDescr, exposed, findings }` — read-only SNMPv2c GET (sysDescr) per candidate community; flags agents answering a default/guessable community |
 
+### Database & remote services
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `mysql.probe` | scanning · active | `port`, `timeoutMs` | `{ isMySQL, protocol, serverVersion, findings }` — reads the MySQL/MariaDB handshake (version banner). No auth |
+| `postgres.probe` | scanning · active | `port`, `timeoutMs` | `{ isPostgres, sslSupported, findings }` — PostgreSQL SSLRequest fingerprint + TLS availability. No auth |
+| `rdp.probe` | scanning · active | `port`, `timeoutMs` | `{ isRDP, security, nla, findings }` — RDP X.224 negotiation; flags Standard Security (no TLS/NLA). No credentials |
+| `ldap.probe` | scanning · active | `port`, `timeoutMs` | `{ isLDAP, anonymousBind, result, findings }` — LDAP anonymous simple-bind check (directory-enumeration exposure). Read-only |
+
+### Auth-aware scanning
+
+All `http.*` executors accept auth options to reach content behind a login:
+`bearer` (→ `Authorization: Bearer`), `basic` (`"user:pass"` → `Authorization: Basic`),
+`cookie` (session cookie value), and `headers` (arbitrary extra headers).
+
+```yaml
+- name: Authenticated header grade
+  uses: http.security_score
+  with:
+    bearer: "{{env.API_TOKEN}}"
+    cookie: "session=abc123"
+```
+
 ### Cloud
 
 | `uses` | Phase · Posture | Options | Returns |

@@ -47,7 +47,7 @@ assessment conversationally.
 ## Lean tool mode
 
 Set `CATS_TOOL_MODE=lean` (in the server's `env`) to hide the 56 per-executor
-tools (78 → 22) for sharper agent tool-choice — executors stay reachable via
+tools (82 → 22) for sharper agent tool-choice — executors stay reachable via
 `cats_execute` and discoverable via `cats_capabilities`.
 
 ## Verify manually
