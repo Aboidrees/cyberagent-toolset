@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.14.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.15.0
  *
  * Tools are generated dynamically from two sources:
  *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
@@ -36,14 +36,14 @@ import { runPlaybook }   from './runner.js';
 import { ensureDir }     from './utils/fsx.js';
 import { loadPlaybooks } from './utils/playbooks.js';
 import {
-  createAssessment, runStep, saveAssessment, loadAssessment,
+  createAssessment, runStep, saveAssessment, loadAssessment, preflightTarget,
 } from './assessment.js';
 import { suggest }       from './pivots.js';
 import { synthesize }    from './assessment-report.js';
 import { listResources, listResourceTemplates, readResource } from './mcp-resources.js';
 import { PROMPTS, getPrompt } from './mcp-prompts.js';
 
-const VERSION = '0.14.0';
+const VERSION = '0.15.0';
 const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
@@ -297,9 +297,12 @@ async function main() {
       } else if (name === `${PREFIX}_assess_start`) {
         const posture = args.passive ? 'passive' : undefined;
         const session = createAssessment({ target: args.target, posture });
+        const reachability = await preflightTarget(session);
         await saveAssessment(session);
         result = {
           assessmentId: session.id, target: session.target, targetType: session.targetType,
+          reachability,
+          ...(reachability.resolves ? {} : { warning: `Target does not resolve (${reachability.reason}) — likely a typo or nonexistent. Verify the hostname before assessing.` }),
           suggestions: suggest(session, catalog, { posture, limit: args.limit || 10 }),
           hint: 'Run actions with cats_assess_run, then cats_assess_report when done.',
         };

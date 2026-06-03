@@ -4,7 +4,7 @@
 
 CyberAgentToolSet (CATS) — formerly `mcp-recon-runner` — is an MCP server **and** CLI that orchestrates **authorized** security assessments across the attack lifecycle. Capabilities ship as installable **extensions** (domain modules), the core is a small **engine + catalog**, and everything is driven by YAML playbooks and the Model Context Protocol so Claude (or any MCP client) can run it conversationally.
 
-- **Version:** v0.14.0
+- **Version:** v0.15.0
 - **Scale:** 56 executors across 18 extensions → 78 MCP tools (full mode) + MCP resources & prompts; a lean tool mode trims to 22
 - **Agent-driven:** stateful **assessments** let an AI agent run a full investigation — start → run → (entities discovered → new pivots) → prioritized report.
 - **Repo:** [github.com/Aboidrees/cyberagent-toolset](https://github.com/Aboidrees/cyberagent-toolset) (public)
@@ -35,7 +35,8 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | Phase 7 — Tool expansion | 0.11.0 | +8 keyless executors (`rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit`) + `rdap`/`ssh` extensions; 51/51 self-test | PR #9 merged |
 | Phase 8 — Tools + ecosystem & hardening | 0.12.0 | +5 executors (`smb.probe`, `snmp.probe`, `cloud.bucket_objects`, `web.screenshot`, `hunter.emails`) + `smb`/`snmp`/`hunter` extensions; runtime permission enforcement + `permissions` command; extension-starter template; npm-publish readiness; 56/56 self-test | merged |
 | Phase 9 — Agent-driven assessments | 0.13.0 | Stateful assessment sessions + entity graph + pivot engine ("next best action") + correlated report synthesis; 4 MCP tools (`cats_assess_start/next/run/report`) + `assess` CLI; 77 MCP tools | PR #10 merged |
-| Phase 10 — Agent-native MCP surface | 0.14.0 | MCP **Resources** (capabilities + assessments/reports) + **Prompts** (`assess-domain`, `triage-findings`, `passive-osint`, `quick-recon`); **lean tool mode** + generic `cats_execute`; assessment **eval harness** (`npm run eval`) | PR open |
+| Phase 10 — Agent-native MCP surface | 0.14.0 | MCP **Resources** (capabilities + assessments/reports) + **Prompts** (`assess-domain`, `triage-findings`, `passive-osint`, `quick-recon`); **lean tool mode** + generic `cats_execute`; assessment **eval harness** (`npm run eval`) | PR #11 |
+| Phase 11 — Target diagnostics | 0.15.0 | Assessment **preflight** (`reachability`) + report **diagnostics** — a nonexistent/non-resolving target gets an explicit reason (`ENOTFOUND`) instead of a silent blank; eval **skips** dead targets | PR open |
 
 ## 3. Architecture (current)
 
@@ -148,12 +149,12 @@ The project has **no automated test framework by design** (executors are live-ne
 ## 12. Where things stand
 
 - **Merged to `main`:** Phases 1–9 (incl. the CATS refactor + agent-driven assessments) — 56 executors, 78 MCP tools.
-- **Open:** Phase 10 — agent-native MCP surface (Resources + Prompts, lean tool mode, eval harness). Awaiting review/merge.
+- **Open:** Phase 10 (agent-native MCP surface) + Phase 11 (target diagnostics). Awaiting review/merge.
 - Repo is public; wiki is live and current.
 
 ## 13. The plan / roadmap forward
 
-**Immediate:** merge the Phase 10 PR.
+**Immediate:** merge the Phase 10 + 11 PRs.
 
 **The strategic bet (Phase 9):** lean into the MCP/agent angle — CATS's defensible value over a bare scanner like Nuclei (which it *wraps*, as one of 56 executors) is being the **agent-driven orchestration layer**. Phase 9 lands the keystone: stateful assessments, an entity graph, a pivot engine ("next best action"), and correlated report synthesis. Nuclei can't pivot across tools or reason about a whole assessment; CATS now can.
 
@@ -220,6 +221,7 @@ The project has **no automated test framework by design** (executors are live-ne
 - **Entity graph** — the deduped set of entities accumulated in a session, each tagged with the executor that found it. The session's working memory.
 - **Pivot engine** (`src/pivots.js`) — the "next best action" intelligence. Given the entity graph and what's already run, it proposes ranked next executors (a discovered subdomain → web/TLS sweep on it; an open 445 → `smb.probe`; an unscored CVE → `vuln.epss`). This is the connective reasoning a bare scanner can't do.
 - **Synthesis** (`src/assessment-report.js`) — turns an accumulated session into one prioritized report: deduped findings, CVEs correlated with their EPSS exploit-probability, and an entity inventory. The deliverable.
+- **Reachability / diagnostics** — a preflight (`preflightTarget`) resolves the target at `start` and records whether it resolves and why not (`ENOTFOUND`, etc.). The report's **Diagnostics** section then explains an empty result explicitly ("Target does not resolve — likely a typo") instead of leaving it silent, so an agent (or the eval) can tell a *dead target* apart from a *broken engine*.
 
 ### Interface (MCP + CLI)
 

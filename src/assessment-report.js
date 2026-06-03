@@ -40,6 +40,18 @@ export function synthesize(session) {
 
   const usesRun = [...new Set(session.steps.map(s => s.uses))];
 
+  // Diagnostics — explain an empty result instead of leaving it silent.
+  const reach = session.reachability || null;
+  const nonSeedEntities = session.entities.filter(e => e.source !== 'seed').length;
+  const diagnostics = [];
+  if (reach && !reach.resolves) {
+    diagnostics.push(reach.reason === 'ENOTFOUND'
+      ? `Target "${session.target}" does not resolve (ENOTFOUND) — likely a typo or a nonexistent domain. There is nothing to assess; double-check the hostname.`
+      : `Target "${session.target}" has no A/AAAA records (${reach.reason}) — the name exists in DNS but points to no host.`);
+  } else if (session.steps.length > 0 && nonSeedEntities === 0) {
+    diagnostics.push(`No public footprint discovered after ${session.steps.length} steps — the target resolves but exposes little externally (or passive sources returned nothing). Try active scanning, or verify the target.`);
+  }
+
   const json = {
     id: session.id,
     target: session.target,
@@ -48,6 +60,8 @@ export function synthesize(session) {
     posture: session.posture,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
+    reachability: reach,
+    diagnostics,
     coverage: { stepsRun: session.steps.length, executorsUsed: usesRun.length, executors: usesRun.sort() },
     entityCounts: Object.fromEntries(ENTITY_ORDER.filter(t => byType[t]).map(t => [t, byType[t].length])),
     severityCounts: counts,
@@ -69,7 +83,15 @@ function render(j) {
   L.push(`- **Coverage:** ${j.coverage.stepsRun} steps · ${j.coverage.executorsUsed} executors`);
   const sc = j.severityCounts;
   L.push(`- **Findings:** ${sc.critical} critical · ${sc.high} high · ${sc.medium} medium · ${sc.low} low · ${sc.info} info`);
+  if (j.reachability) L.push(`- **Target resolves:** ${j.reachability.resolves ? `yes (${j.reachability.addresses.slice(0, 4).join(', ')})` : `no — ${j.reachability.reason}`}`);
   L.push('');
+
+  if (j.diagnostics && j.diagnostics.length) {
+    L.push('## Diagnostics');
+    L.push('');
+    for (const d of j.diagnostics) L.push(`- ⚠ ${d}`);
+    L.push('');
+  }
 
   if (j.topRisks.length) {
     L.push('## Top risks');
