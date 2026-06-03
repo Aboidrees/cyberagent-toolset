@@ -4,7 +4,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.17.0
+## Current state — v0.18.0
 
 | Area | Status |
 | ------ | -------- |
@@ -14,6 +14,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 | **Phase 11 — target diagnostics**: assessment preflight (`reachability`) + report diagnostics — explicit reason for an empty/dead target; eval skips unresolvable targets | ✅ Done |
 | **Phase 12 — backlog completion**: +4 service probes (mysql/postgres/rdp/ldap); auth-aware scanning; MCP resource subscriptions; LLM-in-the-loop eval framework | ✅ Done |
 | **Phase 13 — web dashboard**: local browser UI (cyberagent dashboard) to browse/drive/diff (Node-http, no new dep, localhost) | ✅ Done |
+| **Phase 14 — robustness**: unit-test suite (npm test, 21 tests, no network) for the binary parsers + pure logic, wired into CI | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |

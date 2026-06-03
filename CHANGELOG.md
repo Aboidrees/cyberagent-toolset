@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.18.0] - 2026-06-04
+
+Phase 14 — robustness. A real unit-test suite for the hand-rolled parsers and
+pure logic, wired into CI. No runtime/behaviour changes.
+
+### Added for 0.18.0
+
+- **Unit test suite** (`npm test` → `node --test`, 21 tests, **no network**):
+  - `test/units.test.mjs` — `validateTarget` (command-injection guard), `buildUrl`
+    (SSRF/host-override guard), `authHeaders`, entity extraction, the pivot engine
+    (seed / posture filter / dedup / port-probe mapping), and report synthesis
+    (CVE×EPSS correlation + diagnostics).
+  - `test/probes.test.mjs` — each binary probe against a synthetic localhost server,
+    covering the SMB2 / SSH-KEXINIT / RDP-X.224 / LDAP-BER / MySQL-handshake /
+    Postgres / SNMP-ASN.1 parsing.
+- CI runs `npm test` in the deterministic `validate` job.
+
+### Changed for 0.18.0
+
+- CI `tools/list` lower-bound assertion 40 → 80 (matches the current 82-tool set).
+- about.md: the "no automated tests by design" note replaced with the two-layer
+  posture (offline unit suite + live-network self-test).
+
 ## [0.17.0] - 2026-06-04
 
 Phase 13 — local web dashboard. A browser UI for the toolset (no new dependency —
