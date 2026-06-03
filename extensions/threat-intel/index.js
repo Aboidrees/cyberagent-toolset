@@ -1,14 +1,13 @@
 import { hostLookup } from './src/shodan.js';
 import { cveLookup } from './src/vuln.js';
-import { epss } from './src/epss.js';
 import { findings } from './report.js';
 
-/** Threat intelligence — Shodan host data, NVD CVE lookup, and EPSS scoring. */
+/** Threat intelligence — Shodan host data and NVD CVE lookup. */
 export default {
   name: 'threat-intel',
-  version: '1.1.0',
+  version: '1.0.0',
   domain: 'threat-intel',
-  description: 'Threat intelligence — Shodan host data (key-gated), NVD CVE lookup, and EPSS exploit-probability scoring (keyless).',
+  description: 'Threat intelligence — Shodan host data (key-gated) and NVD CVE lookup (keyless).',
   permissions: { network: ['https'], env: ['SHODAN_API_KEY', 'NVD_API_KEY'], bins: [] },
   report: { findings },
   executors: [
@@ -39,18 +38,6 @@ export default {
         minCvss: { type: 'number', description: 'Minimum CVSS base score. Default: 0' },
         severity: { type: 'string', description: 'Filter: LOW|MEDIUM|HIGH|CRITICAL' },
         maxResults: { type: 'number', description: 'Max CVEs to return. Default: 20' },
-      },
-    },
-    {
-      uses: 'vuln.epss',
-      phase: 'reconnaissance',
-      posture: 'passive',
-      targetTypes: [],
-      summary: 'EPSS exploit-probability scoring for one or more CVEs (FIRST.org, keyless).',
-      run: epss,
-      inputSchema: {
-        cve: { type: 'string', description: 'CVE id or comma list, e.g. "CVE-2021-44228,CVE-2021-45046"' },
-        minScore: { type: 'number', description: 'Only return CVEs with EPSS >= this (0..1). Default: 0' },
       },
     },
   ],

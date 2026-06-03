@@ -8,11 +8,11 @@ This document tracks planned executors, features, playbooks, and integrations. I
 
 | Area | Status |
 | ------ | -------- |
-| **43 executors across 13 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| **40 executors across 13 extensions** (recon · scanning · gaining-access) | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
-| MCP server with catalog-driven tool registration (60 tools) + `cats_capabilities` | ✅ Done |
+| MCP server with catalog-driven tool registration (57 tools) + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
@@ -79,7 +79,7 @@ detailed spec below.
 | Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
 | Nuclei template scan | `nuclei.scan` | ✅ | — |
 
-**Today: 43 executors live** across 13 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
+**Today: 40 executors live** across 13 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.

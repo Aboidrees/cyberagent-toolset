@@ -1,6 +1,6 @@
 # Executors
 
-43 executors across 13 domain extensions, addressed by a stable `uses:` key. Run
+40 executors across 13 domain extensions, addressed by a stable `uses:` key. Run
 `cats_capabilities` (MCP) for the live list. Full options + return shapes are in
 the repo's `docs/executors.md`.
 
@@ -12,14 +12,12 @@ the repo's `docs/executors.md`.
 | `dns.reverse` | dns | Reverse DNS / PTR lookup or CIDR sweep |
 | `dns.dnssec` | dns | DNSSEC posture (DNSKEY/DS + AD flag) via DoH |
 | `dns.caa` | dns | CAA records — which CAs may issue certs |
-| `dns.txt_fingerprint` | dns | SaaS/vendor footprint from TXT verification tokens (via DoH) |
 | `subdomains.passive` | dns | Passive subdomains via crt.sh |
 | `whois.lookup` | whois | WHOIS registration data |
 | `email.security` | email | SPF · DMARC · DKIM · MTA-STS · BIMI |
 | `ip.intel` | ip-intel | ASN / BGP / country / hosting (key-gated abuse score) |
 | `shodan.host` | threat-intel | Shodan host data (needs `SHODAN_API_KEY`) |
 | `vuln.cve_lookup` | threat-intel | NVD CVE lookup by product/keyword/CPE |
-| `vuln.epss` | threat-intel | EPSS exploit-probability scoring for CVEs (FIRST.org) |
 | `web.wayback` | web | Archived URLs from the Wayback Machine |
 | `securitytrails.subdomains` | securitytrails | Historical subdomains (needs key) |
 | `securitytrails.dns_history` | securitytrails | Historical A-record timeline (needs key) |
@@ -48,7 +46,6 @@ the repo's `docs/executors.md`.
 | `http.cookies` | web | Cookie Secure/HttpOnly/SameSite audit |
 | `http.open_redirect` | web | Open-redirect probe |
 | `http.subdomain_takeover` | web | Dangling-CNAME takeover detection |
-| `http.graphql` | web | GraphQL endpoint discovery + introspection exposure |
 | `tls.inspect` | tls | Certificate + cipher |
 | `tls.deep` | tls | Protocols, weak ciphers, chain, OCSP, HSTS |
 | `nuclei.scan` | nuclei | **Nuclei templates — thousands of checks** (needs the `nuclei` binary) |
