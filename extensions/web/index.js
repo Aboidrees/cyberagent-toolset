@@ -2,7 +2,10 @@ import {
   getHeaders, getPath, securityScore, wafDetect, fingerprint,
   corsCheck, methods, fuzzPaths, gitLeak,
 } from './src/http.js';
-import { wayback, secrets, openRedirect, subdomainTakeover, robots, cookies, graphql } from './src/advanced.js';
+import {
+  wayback, secrets, openRedirect, subdomainTakeover, robots, cookies, graphql,
+  securityTxt, wellKnown, faviconHash,
+} from './src/advanced.js';
 import { findings } from './report.js';
 
 const url = { type: 'string', description: 'URL path. Default: "/"' };
@@ -11,7 +14,7 @@ const scheme = { type: 'string', description: '"http" or "https". Default: "http
 /** Web surface — HTTP scanning and read-only exposure checks. */
 export default {
   name: 'web',
-  version: '1.1.0',
+  version: '1.2.0',
   domain: 'web',
   description: 'Web surface — headers/content, header grade, WAF/CDN, tech fingerprint, CORS, methods, cookies, robots, path fuzzing, secrets, open-redirect, subdomain-takeover, .git exposure, and Wayback URLs.',
   permissions: { network: ['http', 'https'], env: [], bins: [] },
@@ -96,6 +99,21 @@ export default {
       uses: 'http.graphql', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'Detect a GraphQL endpoint and whether introspection is exposed.',
       run: graphql, inputSchema: { target: { type: 'string' }, path: url, scheme },
+    },
+    {
+      uses: 'web.security_txt', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url'],
+      summary: 'Fetch + parse security.txt (RFC 9116) — disclosure contact/policy; flags expiry.',
+      run: securityTxt, inputSchema: { target: { type: 'string' }, scheme },
+    },
+    {
+      uses: 'web.well_known', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url'],
+      summary: 'Enumerate well-known URIs (RFC 8615) — OAuth/OpenID discovery, MTA-STS, policies.',
+      run: wellKnown, inputSchema: { target: { type: 'string' }, scheme },
+    },
+    {
+      uses: 'http.favicon_hash', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
+      summary: 'Shodan/Censys favicon hash (mmh3) for infrastructure correlation.',
+      run: faviconHash, inputSchema: { target: { type: 'string' }, path: url, scheme },
     },
   ],
 };

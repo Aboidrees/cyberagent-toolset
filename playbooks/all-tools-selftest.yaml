@@ -19,6 +19,10 @@ steps:
       types: [A, AAAA, CNAME, NS, MX, TXT]
   - name: WHOIS
     uses: whois.lookup
+  - name: RDAP registration (structured WHOIS)
+    uses: rdap.lookup
+    with:
+      timeoutMs: 15000
   - name: Passive subdomains (crt.sh)
     uses: subdomains.passive
     with:
@@ -55,6 +59,10 @@ steps:
     uses: email.security
     with:
       timeoutMs: 20000
+  - name: SMTP STARTTLS/AUTH probe
+    uses: smtp.probe
+    with:
+      timeoutMs: 12000
   - name: ASN / IP intelligence
     uses: ip.intel
   - name: Security header score (A–F)
@@ -78,6 +86,11 @@ steps:
     with:
       port: 443
       timeoutMs: 10000
+  - name: Certificate Transparency history (crt.sh)
+    uses: cert.ctlog
+    with:
+      limit: 25
+      timeoutMs: 30000
   - name: CVE lookup (NVD)
     uses: vuln.cve_lookup
     with:
@@ -125,6 +138,21 @@ steps:
     with:
       scheme: "{{vars.scheme}}"
       timeoutMs: 15000
+  - name: security.txt (RFC 9116)
+    uses: web.security_txt
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
+  - name: Well-known URIs (RFC 8615)
+    uses: web.well_known
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 8000
+  - name: Favicon hash (Shodan/Censys pivot)
+    uses: http.favicon_hash
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 10000
   - name: DNSSEC posture
     uses: dns.dnssec
     with:
@@ -135,6 +163,10 @@ steps:
       timeoutMs: 8000
   - name: TXT SaaS fingerprint
     uses: dns.txt_fingerprint
+    with:
+      timeoutMs: 8000
+  - name: Zone transfer (AXFR) attempt
+    uses: dns.zone_transfer
     with:
       timeoutMs: 8000
   - name: Subdomain brute-force
@@ -178,6 +210,10 @@ steps:
     uses: network.banner
     with:
       timeoutMs: 30000
+  - name: SSH algorithm audit
+    uses: ssh.audit
+    with:
+      timeoutMs: 12000
   - name: nmap UDP (top 20)
     uses: nmap.udp
     with:
