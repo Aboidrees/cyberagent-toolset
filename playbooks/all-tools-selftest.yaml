@@ -235,6 +235,22 @@ steps:
     uses: snmp.probe
     with:
       timeoutMs: 4000
+  - name: MySQL handshake probe
+    uses: mysql.probe
+    with:
+      timeoutMs: 6000
+  - name: PostgreSQL SSLRequest probe
+    uses: postgres.probe
+    with:
+      timeoutMs: 6000
+  - name: RDP security probe
+    uses: rdp.probe
+    with:
+      timeoutMs: 6000
+  - name: LDAP anonymous-bind probe
+    uses: ldap.probe
+    with:
+      timeoutMs: 6000
   - name: nmap UDP (top 20)
     uses: nmap.udp
     with:
