@@ -96,6 +96,16 @@ node src/index.js assess report <id> [--json] [--out report.md]
 node src/index.js assess list                         # all saved assessments
 ```
 
+## dashboard
+
+Local browser UI — browse assessments and runs, drive an assessment
+(start → run → prioritized report), and diff two runs. Built on Node's `http`
+(no new dependency) and **localhost-bound** (it can trigger active scans).
+
+```bash
+node src/index.js dashboard [--port 7878] [--host 127.0.0.1]   # → http://127.0.0.1:7878
+```
+
 ## Passive-only / safe mode
 
 Add `--passive` to `run` or `auto` (or the `passive` option on the MCP `cats_run`

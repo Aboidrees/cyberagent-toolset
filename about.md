@@ -4,7 +4,7 @@
 
 CyberAgentToolSet (CATS) — formerly `mcp-recon-runner` — is an MCP server **and** CLI that orchestrates **authorized** security assessments across the attack lifecycle. Capabilities ship as installable **extensions** (domain modules), the core is a small **engine + catalog**, and everything is driven by YAML playbooks and the Model Context Protocol so Claude (or any MCP client) can run it conversationally.
 
-- **Version:** v0.16.0
+- **Version:** v0.17.0
 - **Scale:** 60 executors across 22 extensions → 82 MCP tools (full mode) + MCP resources & prompts; a lean tool mode trims to 22
 - **Agent-driven:** stateful **assessments** let an AI agent run a full investigation — start → run → (entities discovered → new pivots) → prioritized report.
 - **Repo:** [github.com/Aboidrees/cyberagent-toolset](https://github.com/Aboidrees/cyberagent-toolset) (public)
@@ -38,6 +38,7 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | Phase 10 — Agent-native MCP surface | 0.14.0 | MCP **Resources** (capabilities + assessments/reports) + **Prompts** (`assess-domain`, `triage-findings`, `passive-osint`, `quick-recon`); **lean tool mode** + generic `cats_execute`; assessment **eval harness** (`npm run eval`) | PR #11 |
 | Phase 11 — Target diagnostics | 0.15.0 | Assessment **preflight** (`reachability`) + report **diagnostics** — a nonexistent/non-resolving target gets an explicit reason (`ENOTFOUND`) instead of a silent blank; eval **skips** dead targets | PR open |
 | Phase 12 — Backlog completion | 0.16.0 | +4 service probes (`mysql`/`postgres`/`rdp`/`ldap`); auth-aware scanning (Bearer/Basic/Cookie on `http.*`); MCP **resource subscriptions** (`resources/updated`); **LLM-in-the-loop eval** framework (`npm run eval:llm`); 60/60 self-test | PR open |
+| Phase 13 — Web dashboard | 0.17.0 | Local browser UI (`cyberagent dashboard`) — browse assessments/runs, drive an assessment (start → run → report), diff runs; Node-`http`, no new dep, localhost-bound | PR open |
 
 ## 3. Architecture (current)
 
@@ -150,17 +151,18 @@ The project has **no automated test framework by design** (executors are live-ne
 ## 12. Where things stand
 
 - **Merged to `main`:** Phases 1–10 (incl. the CATS refactor + agent-driven assessments + agent-native MCP surface) — 56 executors.
-- **Open:** Phase 11 (target diagnostics) + Phase 12 (service probes, auth-aware scanning, resource subscriptions, LLM-in-the-loop eval) — 60 executors, 82 MCP tools. Awaiting review/merge.
+- **Open:** Phases 11–13 (target diagnostics; service probes + auth-aware scanning + resource subscriptions + LLM-eval; web dashboard) — 60 executors, 82 MCP tools. Awaiting review/merge.
 - Repo is public; wiki is live and current.
 
 ## 13. The plan / roadmap forward
 
-**Immediate:** merge the Phase 11 + 12 PRs.
+**Immediate:** merge the Phase 11–13 PRs.
 
 **The strategic bet (Phase 9):** lean into the MCP/agent angle — CATS's defensible value over a bare scanner like Nuclei (which it *wraps*, as one of 56 executors) is being the **agent-driven orchestration layer**. Phase 9 lands the keystone: stateful assessments, an entity graph, a pivot engine ("next best action"), and correlated report synthesis. Nuclei can't pivot across tools or reason about a whole assessment; CATS now can.
 
 **Shipped (was the prior backlog):**
 
+- ✅ **Web dashboard** — local browser UI (`cyberagent dashboard`) to browse, drive, and diff *(v0.17.0)*.
 - ✅ **Service probes** — `mysql.probe`, `postgres.probe`, `rdp.probe`, `ldap.probe` (raw-socket); **auth-aware scanning** (Bearer/Basic/Cookie on `http.*`); **resource subscriptions**; **LLM-in-the-loop eval** framework *(v0.16.0)*.
 - ✅ **Agent-native MCP surface** — Resources (`cats://…`) + Prompts (`assess-domain`/`triage-findings`/…), lean tool mode + `cats_execute`, assessment eval harness *(v0.14.0)*.
 - ✅ **Agent-driven assessments** — sessions + entity graph + pivot engine + synthesis; `cats_assess_*` MCP tools + `assess` CLI *(v0.13.0)*.
@@ -172,7 +174,6 @@ The project has **no automated test framework by design** (executors are live-ne
 **Still ahead (lean further into the agent angle):**
 
 - **LLM-in-the-loop evals (scored)** — the Phase 12 framework runs a heuristic baseline; wire a live agent (your API key) + a sharper judge.
-- **Web dashboard** — a local UI to browse/diff runs and trigger assessments (in progress).
 - More key-gated intel providers; `npm publish` the package + a reference `cyberagent-ext-*`.
 
 > **Explicitly not on the roadmap:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`) — out of scope by design.
@@ -234,7 +235,7 @@ The project has **no automated test framework by design** (executors are live-ne
 - **Prompt (MCP prompt)** — a pre-authored, one-click agent workflow (`assess-domain`, `triage-findings`, `passive-osint`, `quick-recon`) that tells the agent exactly which `cats_assess_*` tools to call, in order — so a non-expert gets a well-driven assessment.
 - **Lean tool mode** — `CATS_TOOL_MODE=lean` drops the 56 per-executor MCP tools (78 → 22) so a client isn't overwhelmed; executors stay reachable via `cats_execute` and discoverable via `cats_capabilities`.
 - **Eval harness** (`scripts/eval.mjs`, `npm run eval`) — a deterministic regression for the agent layer: drives the assessment pivot-loop programmatically against a golden target and asserts the investigation progresses (entities discovered, pivots surfaced, report synthesized). Guards the machinery the agent depends on (it does not test LLM tool-choice — that needs a live agent).
-- **CLI** — the command-line interface (`src/index.js`, installed bin `cyberagent`). Subcommands: `run` (default), `auto`, `capabilities`, `permissions`, `assess`, `diff`, `watch`, `schedule`, `report`.
+- **CLI** — the command-line interface (`src/index.js`, installed bin `cyberagent`). Subcommands: `run` (default), `auto`, `capabilities`, `permissions`, `assess`, `dashboard`, `diff`, `watch`, `schedule`, `report`.
 
 ### Extensibility
 

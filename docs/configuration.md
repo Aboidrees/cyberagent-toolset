@@ -98,7 +98,7 @@ HUNTER_API_KEY=your_key_here             # hunter.emails (no-op without it)
 CHROME_PATH=                             # web.screenshot — override Chrome/Chromium path
 
 # ── Runtime behaviour ──
-CATS_TOOL_MODE=full                      # "lean" hides per-executor MCP tools (78 → 22)
+CATS_TOOL_MODE=full                      # "lean" hides per-executor MCP tools (82 → 22)
 CATS_STRICT_PERMISSIONS=0                # "1" makes undeclared env/bin access throw
 ```
 
@@ -142,6 +142,9 @@ node src/index.js assess run <id> --top 5                 # run top suggestions;
 node src/index.js assess next <id> [--top 10]             # show ranked next actions
 node src/index.js assess report <id> [--json] [--out report.md]
 node src/index.js assess list                             # all saved assessments
+
+# Local web dashboard — browse/drive/diff in the browser (localhost-bound)
+node src/index.js dashboard [--port 7878]
 
 # Diff two runs — exits non-zero when something changed (handy for monitoring)
 node src/index.js diff runs/old.json runs/new.json [--out diff.md]

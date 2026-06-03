@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.17.0] - 2026-06-04
+
+Phase 13 — local web dashboard. A browser UI for the toolset (no new dependency —
+built on Node's `http`).
+
+### Added for 0.17.0
+
+- **Web dashboard** (`src/dashboard.js`, `cyberagent dashboard`) — a localhost
+  single-page app to:
+  - browse saved assessments and run reports,
+  - **drive an assessment** from the browser (start → run top-N → prioritized
+    report, with reachability diagnostics surfaced),
+  - view a run report and **diff two runs**.
+- JSON API behind it (`/api/assessments`, `/api/assessment/:id[/report|/next|/run]`,
+  `/api/runs`, `/api/run/:file`, `/api/diff`, `/api/capabilities`), reusing the
+  same assessment engine as the CLI and MCP server.
+- **Localhost-bound by design** (`127.0.0.1`) — it can trigger active scans, so
+  it is an operator tool, not a service to expose. `--port` / `--host` to override.
+- **DNS-rebinding + CSRF guard** — every request is validated against the bound
+  loopback `Host`, and any cross-site `Origin` is rejected (403). Loopback binding
+  alone is insufficient because the POST endpoints drive scans.
+
 ## [0.16.0] - 2026-06-04
 
 Phase 12 — backlog completion. Four service probes, auth-aware scanning, MCP
