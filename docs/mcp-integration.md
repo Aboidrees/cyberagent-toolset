@@ -60,7 +60,7 @@ Fully quit (`Cmd+Q` / `Alt+F4`) and reopen. Claude Desktop will start the MCP se
 
 In Claude, ask: **"List available recon topics"**
 
-Claude will call `cats_topics` and show you the 7 playbooks with descriptions.
+Claude will call `cats_topics` and show you the 13 playbooks with descriptions.
 
 ---
 
@@ -110,6 +110,22 @@ Claude: presents findings, highlights issues
 | `cats_run_multi` | Run multiple playbooks in one call: `{ target, playbooks: [] }` |
 | `cats_play__<id>` | Direct shortcut per playbook, e.g. `cats_play__quick_web_recon` |
 
+### Assessment (stateful — the agent-driven loop)
+
+A stateful investigation: each result feeds an entity graph and a pivot engine
+that suggests the next best actions. Prefer this over one-off executor calls for
+a full assessment.
+
+| Tool | Description |
+| ------ | ------------- |
+| `cats_assess_start` | Start an assessment: `{ target, passive? }` → `assessmentId` + ranked suggestions |
+| `cats_assess_run` | Run the top-N suggestions (or a specific `uses`): folds results in, returns discoveries + new suggestions |
+| `cats_assess_next` | List the ranked next-best actions without running them |
+| `cats_assess_report` | Synthesize a prioritized report (CVE × EPSS correlation, entity inventory, coverage) |
+
+Typical agent loop: `cats_assess_start` → `cats_assess_run` (repeat as new
+entities surface) → `cats_assess_report`.
+
 ### Low-level executor tools
 
 Every executor is exposed as `cats_<uses>` (the `uses` key with dots → underscores),
@@ -149,7 +165,7 @@ The new playbook automatically appears as a tool (`cats_play__<id>`) and in the 
 npm run mcp
 # stderr output:
 # Loaded 18 extensions (56 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.12.0 ready — 73 tools
+# CyberAgentToolSet (CATS) v0.13.0 ready — 77 tools
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null

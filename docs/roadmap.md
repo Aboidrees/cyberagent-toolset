@@ -4,11 +4,12 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.12.0
+## Current state — v0.13.0
 
 | Area | Status |
 | ------ | -------- |
 | **56 executors across 18 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| **Phase 9 — agent-driven assessments**: stateful sessions + entity graph + pivot engine + correlated report synthesis (`cats_assess_*` + `assess` CLI) | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
@@ -16,7 +17,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 | **Phase 6 expansion**: `vuln.epss`, `http.graphql`, `dns.txt_fingerprint` | ✅ Done |
 | **Phase 7 expansion**: `rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit` (+ `rdap`/`ssh` extensions) | ✅ Done |
 | **Phase 8 expansion + hardening**: `smb.probe`, `snmp.probe`, `cloud.bucket_objects`, `web.screenshot`, `hunter.emails` (+ `smb`/`snmp`/`hunter` extensions); runtime permission enforcement + `permissions` command; extension-starter template; npm-publish readiness | ✅ Done |
-| MCP server with catalog-driven tool registration (73 tools) + `cats_capabilities` | ✅ Done |
+| MCP server with catalog-driven tool registration (77 tools) + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
@@ -26,14 +27,17 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ## Next up — candidate backlog
 
-The Phase 8 batch shipped SMB/SNMP probes, `web.screenshot`, bucket object
-listing, `hunter.emails`, runtime permission enforcement, the extension-starter
-template, and npm-publish readiness. Remaining candidates:
+**The strategy: lean into the MCP/agent angle.** CATS's defensible value over a
+bare scanner like Nuclei (which it *wraps*, as one of 56 executors) is being the
+agent-driven orchestration layer. Phase 9 landed the keystone (assessments +
+pivots). Remaining moves, in that spirit:
 
-- **More tools** — additional service probes (LDAP, RDP, MySQL/Postgres banner), more cloud providers, screenshot-into-report embedding.
-- **Key-gated intel** — more providers (e.g. SecurityScorecard, BinaryEdge) via the no-op-without-key pattern.
+- **MCP Resources + Prompts** — expose past reports + live assessment state as readable resources; ship one-click `assess-domain` / `triage-findings` prompts.
+- **Curate the tool surface** — front the 56 executors behind the assessment verbs so agent tool-choice stays sharp.
+- **Eval harness** — golden targets that score whether the agent picks the right tools, chains pivots, and produces a good report (proves the moat, prevents regressions).
+- **More tools** — service probes (LDAP, RDP, MySQL/Postgres banner), more cloud providers, screenshot-into-report embedding; more key-gated providers.
 - **Ecosystem** — publish `cyberagent-toolset` + a reference `cyberagent-ext-*` to npm (package is publish-ready: run `npm publish`).
-- **Bigger features** — local web dashboard for browsing/diffing runs; authentication-aware scanning (cookie/Bearer/Basic for content behind a login).
+- **Bigger features** — local web dashboard for browsing/diffing runs; authentication-aware scanning.
 
 > **Explicitly out of scope, by design:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`).
 

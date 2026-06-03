@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.13.0] - 2026-06-03
+
+Phase 9 — agent-driven assessments. The keystone of the MCP/agent strategy:
+CATS becomes a stateful investigation an AI agent conducts, not just a bag of
+tools. 77 MCP tools (adds 4 assessment tools).
+
+### Added for 0.13.0
+
+- **Assessment sessions** (`src/assessment.js`) — a stateful investigation of one
+  target that accumulates results across many executor calls (findings deduped,
+  entities extracted) and persists to `runs/assessments/<id>.json`.
+- **Entity graph** (`src/entities.js`) — every executor result is mined for
+  entities (subdomains, IPs, open ports, URLs, emails, tech, CVEs), making
+  findings chainable.
+- **Pivot engine** (`src/pivots.js`) — ranked "next best action" suggestions:
+  a discovered subdomain queues a web/TLS sweep; an open 445 queues `smb.probe`;
+  an unscored CVE queues `vuln.epss`; etc.
+- **Report synthesis** (`src/assessment-report.js`) — a correlated, prioritized
+  report: deduped findings, CVEs ranked by EPSS exploit-probability, entity
+  inventory, coverage.
+- **4 MCP tools** — `cats_assess_start`, `cats_assess_next`, `cats_assess_run`,
+  `cats_assess_report` (the agent-facing `start → run → next → report` loop).
+- **`assess` CLI command** — `cyberagent assess start|next|run|report|list`
+  (with `--passive`, `--top`, `--uses`/`--on`, `--json`, `--out`).
+
+### Changed for 0.13.0
+
+- MCP boot banner now reports the orchestration-tool count dynamically (8).
+
 ## [0.12.0] - 2026-06-03
 
 Phase 8 — tool batch + ecosystem & hardening. Five new executors, three new

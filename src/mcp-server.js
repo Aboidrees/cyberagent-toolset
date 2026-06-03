@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.12.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.13.0
  *
  * Tools are generated dynamically from two sources:
  *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
@@ -30,8 +30,13 @@ import { loadCatalog }   from './extensions/loader.js';
 import { runPlaybook }   from './runner.js';
 import { ensureDir }     from './utils/fsx.js';
 import { loadPlaybooks } from './utils/playbooks.js';
+import {
+  createAssessment, runStep, saveAssessment, loadAssessment,
+} from './assessment.js';
+import { suggest }       from './pivots.js';
+import { synthesize }    from './assessment-report.js';
 
-const VERSION = '0.12.0';
+const VERSION = '0.13.0';
 const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
@@ -101,6 +106,65 @@ function buildOrchestrationTools(playbooks) {
           passive:       { type: "boolean", description: "Passive-only: skip active executors (optional)" },
         },
         required: ['target', 'playbooks'],
+      },
+    },
+    {
+      name: `${PREFIX}_assess_start`,
+      description:
+        'Start a STATEFUL recon assessment of a target. Returns an assessmentId and a ranked ' +
+        'list of next-best executors to run. This is the preferred way to drive a full assessment: ' +
+        'start → run → (entities discovered → new suggestions) → report. Use over one-off executor calls.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          target:  { type: 'string', description: 'Domain, IP, or URL to assess' },
+          passive: { type: 'boolean', description: 'Passive-only (OSINT, no packets to the host)' },
+        },
+        required: ['target'],
+      },
+    },
+    {
+      name: `${PREFIX}_assess_next`,
+      description: 'List the ranked next-best actions for an assessment (the pivot engine) without running them.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          assessmentId: { type: 'string', description: 'Assessment id from cats_assess_start' },
+          passive:      { type: 'boolean', description: 'Restrict suggestions to passive executors' },
+          limit:        { type: 'number', description: 'Max suggestions. Default: 10' },
+        },
+        required: ['assessmentId'],
+      },
+    },
+    {
+      name: `${PREFIX}_assess_run`,
+      description:
+        'Run executors inside an assessment and fold the results in (findings deduped, entities ' +
+        'extracted, new pivots surfaced). Either run the top-N suggestions (default), or a specific ' +
+        'executor via `uses` (+ optional `on` target). Returns what was discovered + updated suggestions.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          assessmentId: { type: 'string', description: 'Assessment id' },
+          top:          { type: 'number', description: 'Run the top-N suggested actions. Default: 3' },
+          uses:         { type: 'string', description: 'Run a specific executor instead (e.g. "smb.probe")' },
+          on:           { type: 'string', description: 'Target for `uses` (defaults to the assessment target)' },
+          opts:         { type: 'object', description: 'Options for `uses` (the executor\'s `with` block)' },
+          passive:      { type: 'boolean', description: 'Restrict to passive executors' },
+        },
+        required: ['assessmentId'],
+      },
+    },
+    {
+      name: `${PREFIX}_assess_report`,
+      description: 'Synthesize an assessment into a prioritized report — correlated findings (CVE×EPSS), entity inventory, coverage.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          assessmentId: { type: 'string', description: 'Assessment id' },
+          format:       { type: 'string', description: '"json" (default) or "markdown"' },
+        },
+        required: ['assessmentId'],
       },
     },
   ];
@@ -194,6 +258,46 @@ async function main() {
         }
         result = { target: args.target, playbooksRun: results.length, results };
 
+      } else if (name === `${PREFIX}_assess_start`) {
+        const posture = args.passive ? 'passive' : undefined;
+        const session = createAssessment({ target: args.target, posture });
+        await saveAssessment(session);
+        result = {
+          assessmentId: session.id, target: session.target, targetType: session.targetType,
+          suggestions: suggest(session, catalog, { posture, limit: args.limit || 10 }),
+          hint: 'Run actions with cats_assess_run, then cats_assess_report when done.',
+        };
+
+      } else if (name === `${PREFIX}_assess_next`) {
+        const session = await loadAssessment(args.assessmentId);
+        if (!session) throw new Error(`Assessment "${args.assessmentId}" not found.`);
+        result = { assessmentId: session.id, suggestions: suggest(session, catalog, { posture: args.passive ? 'passive' : undefined, limit: args.limit || 10 }) };
+
+      } else if (name === `${PREFIX}_assess_run`) {
+        const session = await loadAssessment(args.assessmentId);
+        if (!session) throw new Error(`Assessment "${args.assessmentId}" not found.`);
+        const posture = args.passive ? 'passive' : undefined;
+        const toRun = args.uses
+          ? [{ uses: args.uses, target: args.on || session.target, opts: args.opts || {} }]
+          : suggest(session, catalog, { posture, limit: args.top || 3 });
+        const ran = [];
+        for (const s of toRun) {
+          const r = await runStep(session, s, catalog);
+          ran.push({ uses: r.uses, target: r.target, ok: r.ok, error: r.error, newFindings: r.newFindings, newEntities: r.newEntities.map(e => ({ type: e.type, value: e.value })) });
+        }
+        await saveAssessment(session);
+        result = {
+          assessmentId: session.id, ran,
+          totals: { steps: session.steps.length, findings: session.findings.length, entities: session.entities.length },
+          suggestions: suggest(session, catalog, { posture, limit: args.top || 3 }),
+        };
+
+      } else if (name === `${PREFIX}_assess_report`) {
+        const session = await loadAssessment(args.assessmentId);
+        if (!session) throw new Error(`Assessment "${args.assessmentId}" not found.`);
+        const { json, markdown } = synthesize(session);
+        result = args.format === 'markdown' ? { markdown } : json;
+
       } else if (name.startsWith(`${PREFIX}_play__`)) {
         const suffix = name.slice(`${PREFIX}_play__`.length);
         const pb = PLAYBOOKS.find(p => p.toolName === suffix);
@@ -223,7 +327,7 @@ async function main() {
   await server.connect(transport);
   process.stderr.write(
     `CyberAgentToolSet (CATS) v${VERSION} ready — ${ALL_TOOLS.length} tools ` +
-    `(${catalog.executors.length} executors + ${PLAYBOOKS.length} playbooks + 4 orchestration)\n`
+    `(${catalog.executors.length} executors + ${PLAYBOOKS.length} playbooks + ${ALL_TOOLS.length - catalog.executors.length - PLAYBOOKS.length} orchestration)\n`
   );
 }
 
