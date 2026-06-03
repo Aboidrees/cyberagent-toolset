@@ -684,6 +684,7 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `dns.dnssec` | recon · passive | `timeoutMs` | `{ enabled, hasDnskey, hasDs, authenticated, findings }` — DNSSEC posture via DNS-over-HTTPS |
 | `dns.caa` | recon · passive | `timeoutMs` | `{ records, issuers, findings }` — CAA issuance policy |
 | `subdomains.bruteforce` | recon · active | `wordlist[]`, `concurrency`, `lookupTimeoutMs` | `{ wordsTried, found, subdomains[] }` — active subdomain brute-force |
+| `dns.txt_fingerprint` | recon · passive | `timeoutMs` | `{ txtRecordCount, servicesFound, services[] }` — SaaS/vendor footprint from TXT domain-verification tokens (Google, M365, Atlassian, Stripe, …) via DNS-over-HTTPS |
 
 ## Web
 
@@ -694,6 +695,7 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `http.secrets` | gaining-access · active | `path`, `scheme` | Regex scan of the body for exposed keys/tokens/private keys + findings |
 | `http.open_redirect` | scanning · active | `path`, `scheme`, `params[]` | Open-redirect probe across common params + findings |
 | `http.subdomain_takeover` | scanning · active | `scheme` | Dangling-CNAME takeover detection (GitHub/S3/Heroku/Azure/Fastly/…) |
+| `http.graphql` | scanning · active | `path`, `scheme` | `{ pathsTried, endpoints[], introspectionExposed, findings }` — probes common GraphQL paths and flags exposed introspection |
 | `web.wayback` | recon · passive | `limit` | Archived URLs from the Wayback Machine (queries archive.org, not the target) |
 
 ## Network
@@ -709,6 +711,12 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `nuclei.scan` | scanning · active | `scheme`, `severity`, `tags`, `templates[]` | Runs the `nuclei` binary (thousands of templates) → severity-rated findings. No-op note if the binary is absent. Install: github.com/projectdiscovery/nuclei |
+
+## Threat intel — keyless
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `vuln.epss` | recon · passive | `cve` (id or comma list), `minScore`, `findingThreshold`, `timeoutMs` | `{ query, returned, results[], findings }` — EPSS exploit-probability (FIRST.org) for one or more CVEs; flags high-probability CVEs. Pair with `vuln.cve_lookup` to prioritise by real-world risk, not just CVSS |
 
 ## Threat intel — key-gated (no-op without keys)
 

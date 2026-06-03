@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.10.0] - 2026-06-03
+
+Phase 6 — tool expansion. Three keyless executors (43 total across 13 extensions).
+
+### Added
+
+- **`vuln.epss`** (threat-intel, recon · passive, keyless) — EPSS exploit-probability
+  scoring from FIRST.org for one or more CVEs. Pairs with `vuln.cve_lookup` to
+  prioritise by real-world exploitation likelihood, not just CVSS. Flags CVEs above
+  `findingThreshold` (default 0.5; `high` at ≥0.9).
+- **`http.graphql`** (web, scanning · active) — probes common GraphQL paths
+  (`/graphql`, `/api/graphql`, `/v1/graphql`, …) and flags endpoints exposing schema
+  introspection.
+- **`dns.txt_fingerprint`** (dns, recon · passive) — fingerprints the SaaS/vendor
+  footprint from TXT domain-verification tokens (Google, Microsoft 365, Atlassian,
+  Stripe, DocuSign, …). Uses DNS-over-HTTPS with a system-resolver fallback.
+
+### Changed
+
+- Self-test playbook now exercises 43/43 executors; schema `uses`-enum regenerated.
+
 ## [0.9.0] - 2026-06-03
 
 Phase 5 — hardening + capability unlocks. Adds CI, a license, passive-only safe
