@@ -8,6 +8,7 @@ default command, so the bare `-p … --target …` form works.
 ```bash
 node src/index.js -p <playbook.yaml> --target <host> [--var k=v] [--out ./runs] [--timeout ms]
 ```
+
 Runs a playbook. `--var` overrides playbook variables (repeatable). `--target` is
 shorthand for `--var target=<host>`.
 
@@ -16,6 +17,7 @@ shorthand for `--var target=<host>`.
 ```bash
 node src/index.js diff <a.json> <b.json> [--out diff.md]
 ```
+
 Compares two run JSONs — new/removed ports, subdomains, DNS records, certificate
 changes, and security findings. **Exits non-zero when something changed** (handy
 for monitoring/CI).
@@ -25,6 +27,7 @@ for monitoring/CI).
 ```bash
 node src/index.js watch --list <watchlist.yaml> [--out ./runs] [--timeout ms]
 ```
+
 Batch-runs every target × playbook in a watchlist. See [[Automation]].
 
 ## schedule
@@ -32,6 +35,7 @@ Batch-runs every target × playbook in a watchlist. See [[Automation]].
 ```bash
 node src/index.js schedule --playbook <id> --target <host> --cron "<expr>" [--now]
 ```
+
 Runs a playbook on a cron schedule (stays running). New findings fire webhooks if
 configured.
 
@@ -40,6 +44,7 @@ configured.
 ```bash
 node src/index.js report <run.json> --format pdf|docx|html [--out file] [--company "Name"]
 ```
+
 Exports a branded assessment report with executive summary, risk matrix, and
 findings table.
 
@@ -54,6 +59,7 @@ node src/index.js --help
 ```bash
 node src/index.js auto --target <host> [--phase reconnaissance|scanning|gaining-access|all] [--passive]
 ```
+
 Infers the target type (domain / IP / CIDR / URL) and runs every applicable
 executor — "run all applicable recon" with no hand-written playbook.
 
@@ -62,8 +68,33 @@ executor — "run all applicable recon" with no hand-written playbook.
 ```bash
 node src/index.js capabilities [--json]
 ```
+
 Prints every executor grouped by phase / posture / domain. Mirrors the MCP
 `cats_capabilities` tool.
+
+## permissions (alias: perms)
+
+```bash
+node src/index.js permissions [--json]
+```
+
+Shows each extension's declared `network` / `env` / `bins`. Set
+`CATS_STRICT_PERMISSIONS=1` to make undeclared env/bin access throw at runtime.
+
+## assess
+
+A stateful, agent-style assessment: results feed an entity graph and a pivot
+engine that ranks the next best actions; the report correlates findings (CVE ×
+EPSS). Mirrors the MCP `cats_assess_*` tools.
+
+```bash
+node src/index.js assess start <target> [--passive]   # → id + ranked next actions
+node src/index.js assess run <id> --top 5             # run top suggestions; new pivots surface
+node src/index.js assess run <id> --uses smb.probe --on 1.2.3.4   # run a specific executor
+node src/index.js assess next <id> [--top 10]         # show ranked next actions
+node src/index.js assess report <id> [--json] [--out report.md]
+node src/index.js assess list                         # all saved assessments
+```
 
 ## Passive-only / safe mode
 

@@ -79,6 +79,28 @@ built in. See [Configuration](docs/configuration.md).
 
 ---
 
+## Agent-driven assessments
+
+Beyond one-shot playbooks, CATS runs **stateful assessments** — the way an AI
+agent (or you) drives a full investigation. Each result feeds an **entity graph**
+(subdomains, IPs, ports, URLs, CVEs…) and a **pivot engine** that suggests the
+next best actions: a discovered subdomain queues a web/TLS sweep, an open `445`
+queues `smb.probe`, an unscored CVE queues `vuln.epss`. The final report
+correlates findings (CVE × EPSS exploit-probability) into a prioritized list.
+
+```bash
+node src/index.js assess start example.com          # → assessment id + ranked next steps
+node src/index.js assess run  <id> --top 5           # run the top suggestions; new pivots surface
+node src/index.js assess next <id>                   # see the updated ranked actions
+node src/index.js assess report <id>                 # prioritized, correlated report
+```
+
+Over MCP the same loop is `cats_assess_start → cats_assess_run → cats_assess_next
+→ cats_assess_report`, so Claude can conduct and reason about the whole
+assessment conversationally.
+
+---
+
 ## Available playbooks
 
 | Playbook | Steps | Focus |

@@ -15,12 +15,12 @@ the attack lifecycle (reconnaissance · scanning · gaining-access) via installa
 
 ## Using it
 
-- [[CLI Reference]] — `run` · `diff` · `watch` · `schedule` · `report`
+- [[CLI Reference]] — `run` · `assess` · `auto` · `capabilities` · `permissions` · `diff` · `watch` · `schedule` · `report`
 - [[Playbooks]] — the YAML workflows and how to write them
 - [[Executors]] — the 56 capabilities by phase / domain
-- [[API Keys]] — Shodan, NVD, AbuseIPDB, webhooks (all optional)
+- [[API Keys]] — Shodan, NVD, AbuseIPDB, Hunter.io, webhooks (all optional)
 - [[Automation]] — diffing, watchlists, scheduling, report export
-- [[MCP Integration]] — drive it from Claude
+- [[MCP Integration]] — drive it from Claude (incl. stateful `cats_assess_*` assessments)
 
 ## Extending it
 
