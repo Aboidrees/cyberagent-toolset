@@ -16,6 +16,7 @@ import {
 } from './assessment.js';
 import { suggest } from './pivots.js';
 import { synthesize } from './assessment-report.js';
+import { startDashboard } from './dashboard.js';
 
 /**
  * CLI entry point. Multi-command:
@@ -347,6 +348,20 @@ await yargs(hideBin(process.argv))
         console.log(argv.json ? JSON.stringify(json, null, 2) : markdown);
         return;
       }
+    })
+  )
+  // ── dashboard ───────────────────────────────────────────────────────────────
+  .command(
+    'dashboard',
+    'Launch the local web dashboard (browse assessments/runs, drive an assessment)',
+    y => y
+      .option('port', { type: 'number', default: 7878, describe: 'Port. Default: 7878' })
+      .option('host', { type: 'string', default: '127.0.0.1', describe: 'Bind host. Default: 127.0.0.1 (localhost)' }),
+    wrap(async argv => {
+      const { url } = await startDashboard({ port: argv.port, host: argv.host });
+      console.log(`\n  CyberAgentToolSet dashboard → ${url}`);
+      console.log('  Browse assessments & runs, view reports, diff runs, drive an assessment.');
+      console.log('  Localhost-only by design; it can trigger active scans. Ctrl-C to stop.\n');
     })
   )
   .strict()
