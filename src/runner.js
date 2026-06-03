@@ -52,25 +52,28 @@ function withTimeout(promise, ms, label = 'operation') {
   });
 }
 
-export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, stepTimeoutMs }) {
-  // Load playbook. `.yaml`/`.yml` are pure YAML; `.md` is YAML front matter +
-  // Markdown body (legacy). The body, when present, is exposed to templates.
-  const raw = await fs.readFile(playbookPath, 'utf8');
+export async function runPlaybook({ playbookPath, playbook, outDir, varOverrides = {}, stepTimeoutMs, posture }) {
+  // Source the playbook from an in-memory object (e.g. the `auto` command) or
+  // load it. `.yaml`/`.yml` are pure YAML; `.md` is YAML front matter + Markdown
+  // body (legacy). The body, when present, is exposed to templates.
   let fm, content = '';
-  if (playbookPath.endsWith('.yaml') || playbookPath.endsWith('.yml')) {
-    fm = yaml.load(raw) || {};
+  if (playbook) {
+    fm = playbook;
+  } else if (playbookPath.endsWith('.yaml') || playbookPath.endsWith('.yml')) {
+    fm = yaml.load(await fs.readFile(playbookPath, 'utf8')) || {};
   } else {
-    const parsed = matter(raw, { engines: { yaml: s => yaml.load(s) } });
+    const parsed = matter(await fs.readFile(playbookPath, 'utf8'), { engines: { yaml: s => yaml.load(s) } });
     fm = parsed.data;
     content = parsed.content;
   }
 
   const catalog = await loadCatalog();
+  const metaByUses = new Map(catalog.executors.map(e => [e.uses, e]));
   const ctx = { vars: { ...(fm.vars || {}), ...varOverrides } };
   const steps = fm.steps || [];
   const outputs = new Array(steps.length);
   const startedAt = new Date().toISOString();
-  const title = fm.title || fm.id || path.basename(playbookPath);
+  const title = fm.title || fm.id || (playbookPath ? path.basename(playbookPath) : 'run');
 
   // Execute one step and return its output object (caller controls ordering).
   const runStep = async (step, i) => {
@@ -80,6 +83,14 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
     const fn = catalog.registry[stepCtx.uses];
     if (!fn) {
       return { name: stepCtx.name, uses: stepCtx.uses, error: `Unknown executor` };
+    }
+    // Passive-only / safe mode: skip any active executor (no packets to the host).
+    if (posture === 'passive') {
+      const meta = metaByUses.get(stepCtx.uses);
+      if (meta && meta.posture !== 'passive') {
+        logStep(i + 1, `${stepCtx.name} (skipped — active)`, stepCtx.uses);
+        return { name: stepCtx.name, uses: stepCtx.uses, skipped: true, reason: 'passive-only mode: executor is active' };
+      }
     }
     logStep(i + 1, stepCtx.name, stepCtx.uses);
     try {
@@ -114,9 +125,28 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
   // risk matrix, and webhook notifications.
   const findings = extractFindings(report, catalog.reportersByUses);
   const counts = severityCounts(findings);
+
+  // Annotate outputs + findings with their executor's phase/posture/domain, and
+  // compute per-phase coverage (for the phase-grouped report views).
+  for (const o of outputs) {
+    const m = metaByUses.get(o.uses);
+    if (m) { o.phase = m.phase; o.posture = m.posture; o.domain = m.domain; }
+  }
+  for (const f of findings) {
+    const m = metaByUses.get(f.uses);
+    if (m) f.phase = m.phase;
+  }
+  const phaseCoverage = {};
+  for (const o of outputs) {
+    const ph = o.phase || 'other';
+    const c = (phaseCoverage[ph] ||= { ran: 0, skipped: 0, failed: 0 });
+    if (o.skipped) c.skipped++; else if (o.ok) c.ran++; else c.failed++;
+  }
+
   report.findings = findings;
   report.severityCounts = counts;
   report.topSeverity = findings.length ? topSeverity(findings) : null;
+  report.phaseCoverage = phaseCoverage;
 
   const base = timestampFile(title.replace(/\s+/g, '_'));
   const jsonPath = path.join(outDir, `${base}.json`);
@@ -139,18 +169,35 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
     '| -------- | ---- | ------ | --- | ---- |',
     `| ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} | ${counts.info} |`,
     '',
+    '**Coverage by phase:** ' + (['reconnaissance', 'scanning', 'gaining-access']
+      .filter(ph => phaseCoverage[ph])
+      .map(ph => {
+        const c = phaseCoverage[ph];
+        const extra = [c.skipped ? `${c.skipped} skipped` : '', c.failed ? `${c.failed} failed` : ''].filter(Boolean).join(', ');
+        return `${ph} ${c.ran}${extra ? ` (${extra})` : ''}`;
+      }).join(' · ') || 'none'),
+    '',
   ];
   if (findings.length) {
-    mdParts.push('### Findings', '');
-    for (const f of findings.slice(0, 50)) {
-      mdParts.push(`- **[${f.severity.toUpperCase()}]** ${f.message} — \`${f.uses}\` (${f.step})`);
+    mdParts.push('### Findings by phase', '');
+    const byPhase = {};
+    for (const f of findings) (byPhase[f.phase || 'other'] ||= []).push(f);
+    for (const ph of ['reconnaissance', 'scanning', 'gaining-access', 'other']) {
+      const list = byPhase[ph];
+      if (!list || !list.length) continue;
+      mdParts.push(`**${ph}** (${list.length})`, '');
+      for (const f of list.slice(0, 50)) {
+        mdParts.push(`- **[${f.severity.toUpperCase()}]** ${f.message} — \`${f.uses}\` (${f.step})`);
+      }
+      mdParts.push('');
     }
-    mdParts.push('');
   }
   mdParts.push('## Steps & Results');
   for (const o of outputs) {
     mdParts.push(`### ${o.name} \`(${o.uses})\``);
-    if (o.ok) {
+    if (o.skipped) {
+      mdParts.push(`⏭️ **Skipped**: ${o.reason}`);
+    } else if (o.ok) {
       mdParts.push(`<details><summary>Success</summary>\n\n\`\`\`json\n${JSON.stringify(o.data, null, 2)}\n\`\`\`\n</details>`);
     } else {
       mdParts.push(`❌ **Failed**: ${o.error}`);

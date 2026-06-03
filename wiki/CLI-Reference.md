@@ -48,3 +48,25 @@ findings table.
 ```bash
 node src/index.js --help
 ```
+
+## auto
+
+```bash
+node src/index.js auto --target <host> [--phase reconnaissance|scanning|gaining-access|all] [--passive]
+```
+Infers the target type (domain / IP / CIDR / URL) and runs every applicable
+executor — "run all applicable recon" with no hand-written playbook.
+
+## capabilities (alias: list)
+
+```bash
+node src/index.js capabilities [--json]
+```
+Prints every executor grouped by phase / posture / domain. Mirrors the MCP
+`cats_capabilities` tool.
+
+## Passive-only / safe mode
+
+Add `--passive` to `run` or `auto` (or the `passive` option on the MCP `cats_run`
+/ `cats_run_multi` / `cats_play__` tools) to skip every **active** executor — no
+packets reach the target host. Skipped steps show as `⏭️ Skipped` in the report.

@@ -54,6 +54,12 @@ Reports are saved to `runs/` as `.json` and `.md`.
 ## Automation (CLI)
 
 ```bash
+# Auto-run every applicable executor (no playbook); --passive for OSINT-only scope
+node src/index.js auto --target cyberany.org
+
+# List capabilities by phase / posture / domain
+node src/index.js capabilities
+
 # Diff two runs (exits non-zero when something changed)
 node src/index.js diff runs/old.json runs/new.json
 

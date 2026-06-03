@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.9.0] - 2026-06-03
+
+Phase 5 — hardening + capability unlocks. Adds CI, a license, passive-only safe
+mode, target-aware auto-assembly, and phase-grouped listing/reports.
+
+### Added
+
+- **Passive-only / safe mode** — `--passive` (CLI `run` and `auto`; MCP `cats_run`
+  / `cats_run_multi` / `cats_play__`) skips any active executor via per-executor
+  posture metadata. Skipped steps render as `⏭️ Skipped` in the report.
+- **Target-aware auto-assembly** — `cyberagent auto --target <x>` infers the target
+  type (domain/ip/cidr/url) and runs every applicable executor with no playbook.
+  Flags: `--phase reconnaissance|scanning|gaining-access|all`, `--passive`.
+- **`capabilities` / `list` command** — prints every executor grouped by phase /
+  posture / domain (`--json` for raw); mirrors the MCP `cats_capabilities` tool.
+- **Phase-grouped reports** — each step + finding is annotated with phase/posture/
+  domain; the executive summary gains a "Coverage by phase" line and findings are
+  grouped under "Findings by phase".
+- **CI** (`.github/workflows/ci.yml`) — a `validate` gate (`node --check` +
+  `scripts/ci-validate.mjs` invariants + MCP boot) and a `selftest` smoke job
+  (runs the 40-step self-test against example.com, asserts every step executed).
+- **`LICENSE`** — MIT, matching the README.
+- **`scripts/ci-validate.mjs`** — deterministic invariants (catalog, playbook/
+  watchlist resolution, schema uses-enum sync), usable locally too.
+
+### Changed
+
+- `runPlaybook` accepts an in-memory `playbook` object (used by `auto`) and a
+  `posture` option. Version bumped 0.8.0 → 0.9.0.
+
 ## [0.8.0] - 2026-06-02
 
 Phase 4 — tool expansion. **23 → 40 executors** across **13 extensions**, plus the

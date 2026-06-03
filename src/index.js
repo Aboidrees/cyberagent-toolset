@@ -7,6 +7,8 @@ import { diffFiles, formatDiffMarkdown, hasChanges } from './diff.js';
 import { runWatchlist } from './watch.js';
 import { scheduleScan } from './schedule.js';
 import { generateReportFromFile } from './report.js';
+import { loadCatalog } from './extensions/loader.js';
+import { assemble } from './auto.js';
 import { ensureDir } from './utils/fsx.js';
 
 /**
@@ -54,6 +56,7 @@ await yargs(hideBin(process.argv))
       .option('var', { type: 'array', describe: 'Override playbook vars, e.g. --var scheme=http' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
+      .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors (no packets to the host)' })
       .example('$0 -p playbooks/quick-web-recon.yaml --target fortmind.qa', 'Run a playbook'),
     wrap(async argv => {
       await ensureDir(argv.out);
@@ -62,12 +65,48 @@ await yargs(hideBin(process.argv))
         outDir: argv.out,
         varOverrides: collectVars(argv),
         stepTimeoutMs: argv.timeout,
+        posture: argv.passive ? 'passive' : undefined,
       });
       process.stderr.write('\n✅ Done.\n');
       console.log(`JSON:     ${r.jsonPath}`);
       console.log(`Markdown: ${r.mdPath}`);
       if (r.report.topSeverity) console.log(`Top severity: ${r.report.topSeverity}`);
       if (r.notification?.sent) console.log(`Notified: ${JSON.stringify(r.notification.results)}`);
+    })
+  )
+  // ── auto ────────────────────────────────────────────────────────────────────
+  .command(
+    'auto',
+    'Auto-select and run every executor applicable to a target (no playbook needed)',
+    y => y
+      .option('target', { alias: 't', type: 'string', demandOption: true, describe: 'Target (domain / IP / CIDR / URL)' })
+      .option('phase', { type: 'string', default: 'reconnaissance', choices: ['reconnaissance', 'scanning', 'gaining-access', 'all'], describe: 'Which phase(s) to run' })
+      .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors' })
+      .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
+      .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
+      .example('$0 auto --target example.com', 'Run all applicable reconnaissance')
+      .example('$0 auto --target 192.0.2.0/24 --phase all', 'All applicable executors for a CIDR'),
+    wrap(async argv => {
+      const catalog = await loadCatalog();
+      const posture = argv.passive ? 'passive' : undefined;
+      const playbook = assemble(catalog, { target: argv.target, phase: argv.phase, posture });
+      if (!playbook.steps.length) {
+        process.stderr.write(`No applicable executors for a ${playbook._meta.type} in phase "${argv.phase}".\n`);
+        process.exitCode = 1;
+        return;
+      }
+      process.stderr.write(
+        `Target "${playbook._meta.host}" → ${playbook._meta.type}; running ${playbook._meta.selected} executor(s) ` +
+        `[${argv.phase}${posture ? ', passive' : ''}]\n`);
+      await ensureDir(argv.out);
+      const r = await runPlaybook({
+        playbook, outDir: argv.out,
+        varOverrides: { target: playbook.vars.target }, stepTimeoutMs: argv.timeout, posture,
+      });
+      process.stderr.write('\n✅ Done.\n');
+      console.log(`JSON:     ${r.jsonPath}`);
+      console.log(`Markdown: ${r.mdPath}`);
+      if (r.report.topSeverity) console.log(`Top severity: ${r.report.topSeverity}`);
     })
   )
   // ── diff ────────────────────────────────────────────────────────────────────
@@ -151,6 +190,39 @@ await yargs(hideBin(process.argv))
       const out = argv.out || argv.run.replace(/\.json$/i, '') + '.' + argv.format;
       await generateReportFromFile(argv.run, { format: argv.format, out, branding: { company: argv.company } });
       console.log(`Report written: ${out}`);
+    })
+  )
+  // ── capabilities / list ─────────────────────────────────────────────────────
+  .command(
+    ['capabilities', 'list'],
+    'List every executor grouped by phase / posture / domain',
+    y => y.option('json', { type: 'boolean', default: false, describe: 'Output the raw catalog as JSON' }),
+    wrap(async argv => {
+      const catalog = await loadCatalog();
+      if (argv.json) {
+        console.log(JSON.stringify({
+          executors: catalog.executors,
+          byPhase: Object.fromEntries(Object.entries(catalog.byPhase).map(([k, v]) => [k, v.map(e => e.uses)])),
+        }, null, 2));
+        return;
+      }
+      console.log(`CyberAgentToolSet (CATS) — ${catalog.executors.length} executors across ${catalog.descriptors.length} extensions\n`);
+      for (const phase of ['reconnaissance', 'scanning', 'gaining-access']) {
+        const list = catalog.byPhase[phase] || [];
+        if (!list.length) continue;
+        console.log(`${phase.toUpperCase()} (${list.length})`);
+        for (const posture of ['passive', 'active']) {
+          const sub = list.filter(e => e.posture === posture);
+          if (!sub.length) continue;
+          console.log(`  ${posture}:`);
+          const byDomain = {};
+          for (const e of sub) (byDomain[e.domain] ||= []).push(e.uses);
+          for (const d of Object.keys(byDomain).sort()) {
+            console.log(`    ${d.padEnd(15)} ${byDomain[d].sort().join(', ')}`);
+          }
+        }
+        console.log('');
+      }
     })
   )
   .strict()

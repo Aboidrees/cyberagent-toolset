@@ -119,6 +119,12 @@ Beyond the default `run` command, the CLI exposes scale-and-automation commands:
 # Run a playbook (default command — the bare form still works)
 node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
 
+# Auto-run every applicable executor (infers domain/IP/CIDR/URL); --passive for safe mode
+node src/index.js auto --target example.com [--phase all] [--passive]
+
+# List every executor grouped by phase / posture / domain
+node src/index.js capabilities
+
 # Diff two runs — exits non-zero when something changed (handy for monitoring)
 node src/index.js diff runs/old.json runs/new.json [--out diff.md]
 
