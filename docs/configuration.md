@@ -94,6 +94,8 @@ NOTIFY_ON_SEVERITY=high,critical        # comma list, or "all"
 ABUSEIPDB_API_KEY=your_key_here          # ip.intel abuse reputation (optional)
 SHODAN_API_KEY=your_key_here             # shodan.host (no-op without it)
 NVD_API_KEY=your_key_here                # vuln.cve_lookup rate-limit boost (optional)
+HUNTER_API_KEY=your_key_here             # hunter.emails (no-op without it)
+CHROME_PATH=                             # web.screenshot — override Chrome/Chromium path
 ```
 
 All built-in executors work without keys; the keys above only enable extra
@@ -124,6 +126,11 @@ node src/index.js auto --target example.com [--phase all] [--passive]
 
 # List every executor grouped by phase / posture / domain
 node src/index.js capabilities
+
+# Show each extension's declared permissions (network / env / bins)
+node src/index.js permissions
+# Enforce them: CATS_STRICT_PERMISSIONS=1 makes undeclared env/bin access throw
+CATS_STRICT_PERMISSIONS=1 node src/index.js auto --target example.com
 
 # Diff two runs — exits non-zero when something changed (handy for monitoring)
 node src/index.js diff runs/old.json runs/new.json [--out diff.md]

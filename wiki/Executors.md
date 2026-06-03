@@ -1,6 +1,6 @@
 # Executors
 
-51 executors across 15 domain extensions, addressed by a stable `uses:` key. Run
+56 executors across 18 domain extensions, addressed by a stable `uses:` key. Run
 `cats_capabilities` (MCP) for the live list. Full options + return shapes are in
 the repo's `docs/executors.md`.
 
@@ -27,6 +27,7 @@ the repo's `docs/executors.md`.
 | `securitytrails.dns_history` | securitytrails | Historical A-record timeline (needs key) |
 | `censys.host` | censys | Host services/software/ASN (needs key) |
 | `github.leaks` | github-leaks | Public code referencing the domain (needs `GITHUB_TOKEN`) |
+| `hunter.emails` | hunter | Hunter.io domain email harvest — addresses + pattern (needs `HUNTER_API_KEY`) |
 
 ## Reconnaissance / Scanning (active)
 
@@ -40,6 +41,9 @@ the repo's `docs/executors.md`.
 | `http.favicon_hash` | web | Shodan/Censys favicon hash (mmh3) for infra correlation |
 | `smtp.probe` | email | SMTP EHLO — STARTTLS/AUTH + optional open-relay heuristic |
 | `ssh.audit` | ssh | SSH KEXINIT weak cipher/KEX/MAC/host-key audit |
+| `smb.probe` | smb | SMB2 NEGOTIATE — dialect + signing-required (NTLM-relay) check |
+| `snmp.probe` | snmp | SNMPv2c community-string probe (public/private/…) |
+| `web.screenshot` | web | Headless-browser PNG screenshot (no-op without Chrome/Chromium) |
 | `network.ping` | network | ICMP ping statistics |
 | `network.traceroute` | network | Hop-by-hop path |
 | `nmap.scan` | network | nmap TCP port/service scan |
@@ -69,6 +73,7 @@ the repo's `docs/executors.md`.
 | `http.git_leak` | web | Exposed `.git` directory detector |
 | `http.secrets` | web | Scan response body for exposed keys/tokens |
 | `cloud.bucket_finder` | cloud | Public AWS S3 / GCP / Azure buckets |
+| `cloud.bucket_objects` | cloud | List objects in a public bucket; flags sensitive keys |
 
 ## In a playbook
 

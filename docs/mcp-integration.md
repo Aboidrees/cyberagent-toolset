@@ -148,8 +148,8 @@ The new playbook automatically appears as a tool (`cats_play__<id>`) and in the 
 ```bash
 npm run mcp
 # stderr output:
-# Loaded 15 extensions (51 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.11.0 ready — 68 tools
+# Loaded 18 extensions (56 executors), 13 playbooks
+# CyberAgentToolSet (CATS) v0.12.0 ready — 73 tools
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null

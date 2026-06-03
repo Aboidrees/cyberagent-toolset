@@ -4,18 +4,19 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.11.0
+## Current state — v0.12.0
 
 | Area | Status |
 | ------ | -------- |
-| **51 executors across 15 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| **56 executors across 18 extensions** (recon · scanning · gaining-access) | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
 | **Phase 5 hardening**: CI + LICENSE, passive-only `--passive`, target-aware `auto`, phase-grouped reports | ✅ Done |
 | **Phase 6 expansion**: `vuln.epss`, `http.graphql`, `dns.txt_fingerprint` | ✅ Done |
 | **Phase 7 expansion**: `rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit` (+ `rdap`/`ssh` extensions) | ✅ Done |
-| MCP server with catalog-driven tool registration (68 tools) + `cats_capabilities` | ✅ Done |
+| **Phase 8 expansion + hardening**: `smb.probe`, `snmp.probe`, `cloud.bucket_objects`, `web.screenshot`, `hunter.emails` (+ `smb`/`snmp`/`hunter` extensions); runtime permission enforcement + `permissions` command; extension-starter template; npm-publish readiness | ✅ Done |
+| MCP server with catalog-driven tool registration (73 tools) + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
@@ -25,12 +26,14 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ## Next up — candidate backlog
 
-Implementation-ready (keyless, fit existing patterns) unless marked otherwise:
+The Phase 8 batch shipped SMB/SNMP probes, `web.screenshot`, bucket object
+listing, `hunter.emails`, runtime permission enforcement, the extension-starter
+template, and npm-publish readiness. Remaining candidates:
 
-- **More tools** — `web.screenshot` (headless, needs a browser dependency — decision pending), deeper service probes (SMB/SNMP), more cloud providers + bucket object/ACL listing.
-- **Key-gated intel** — `hunter.io` email harvesting and similar, via the no-op-without-key pattern.
-- **Ecosystem** — a starter `cyberagent-ext-*` template repo; publish to npm.
-- **Hardening** — enforce the `permissions` manifest at runtime (block undeclared egress/env from third-party plugins).
+- **More tools** — additional service probes (LDAP, RDP, MySQL/Postgres banner), more cloud providers, screenshot-into-report embedding.
+- **Key-gated intel** — more providers (e.g. SecurityScorecard, BinaryEdge) via the no-op-without-key pattern.
+- **Ecosystem** — publish `cyberagent-toolset` + a reference `cyberagent-ext-*` to npm (package is publish-ready: run `npm publish`).
+- **Bigger features** — local web dashboard for browsing/diffing runs; authentication-aware scanning (cookie/Bearer/Basic for content behind a login).
 
 > **Explicitly out of scope, by design:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`).
 
@@ -95,7 +98,7 @@ detailed spec below.
 | Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
 | Nuclei template scan | `nuclei.scan` | ✅ | — |
 
-**Today: 51 executors live** across 15 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
+**Today: 56 executors live** across 18 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.

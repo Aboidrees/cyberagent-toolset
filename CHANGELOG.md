@@ -4,12 +4,51 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.12.0] - 2026-06-03
+
+Phase 8 — tool batch + ecosystem & hardening. Five new executors, three new
+extensions (`smb`, `snmp`, `hunter`), runtime permission enforcement, an
+extension-starter template, and npm-publish readiness — 56 executors across 18
+extensions / 73 MCP tools.
+
+### Added for 0.12.0
+
+- **`smb.probe`** (smb, scanning · active) — SMB2 NEGOTIATE over TCP/445; reports
+  the negotiated dialect and flags signing-not-required (NTLM-relay exposure).
+  No authentication. New `smb` extension.
+- **`snmp.probe`** (snmp, scanning · active) — read-only SNMPv2c GET (sysDescr)
+  against default/guessable community strings; flags exposed agents. New `snmp`
+  extension.
+- **`cloud.bucket_objects`** (cloud, gaining-access · active) — lists a
+  public-listable S3/GCS/Azure bucket and flags sensitive keys (backups, dumps,
+  secrets).
+- **`web.screenshot`** (web, scanning · active) — headless-browser PNG capture
+  via an installed Chrome/Chromium/Edge; no-op note without one (no new npm dep).
+- **`hunter.emails`** (hunter, recon · passive) — Hunter.io domain email harvest
+  (addresses, pattern, organization). Key-gated (`HUNTER_API_KEY`). New `hunter`
+  extension.
+- **Runtime permission enforcement** — each extension's executors get a scoped
+  `ctx.env(key)` / `ctx.requireBin(name)`; undeclared access warns, or throws
+  under `CATS_STRICT_PERMISSIONS=1`. New `cyberagent permissions` command audits
+  every extension's declared `permissions`.
+- **Extension-starter template** (`templates/cyberagent-ext-starter/`) — a
+  complete, copyable `cyberagent-ext-*` example (descriptor + executor + README).
+- **npm-publish readiness** — bin shebangs + executable bits, `files` whitelist,
+  `repository`/`homepage`/`bugs`/`license`/`author` metadata, `publishConfig`,
+  and a `prepublishOnly` validate gate.
+
+### Changed for 0.12.0
+
+- Self-test playbook now exercises 56/56 executors; schema `uses`-enum
+  regenerated; extension versions bumped (web → 1.3.0, cloud → 1.1.0).
+- `.env.example` documents `HUNTER_API_KEY` and `CHROME_PATH`.
+
 ## [0.11.0] - 2026-06-03
 
 Phase 7 — tool expansion. Eight keyless executors and two new extensions
 (`rdap`, `ssh`) — 51 total across 15 extensions / 68 MCP tools.
 
-### Added
+### Added for 0.11.0
 
 - **`rdap.lookup`** (rdap, recon · passive) — structured WHOIS over RDAP/HTTPS
   (RFC 9083) for domains and IPs: registrar, status, key dates, abuse contact,
@@ -31,7 +70,7 @@ Phase 7 — tool expansion. Eight keyless executors and two new extensions
   flags weak/deprecated cipher/KEX/MAC/host-key algorithms (no authentication).
   New `ssh` extension.
 
-### Changed
+### Changed for 0.11.0
 
 - Self-test playbook now exercises 51/51 executors; schema `uses`-enum
   regenerated; extension versions bumped (web, dns, tls, email).
