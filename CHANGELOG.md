@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.11.0] - 2026-06-03
+
+Phase 7 — tool expansion. Eight keyless executors and two new extensions
+(`rdap`, `ssh`) — 51 total across 15 extensions / 68 MCP tools.
+
+### Added
+
+- **`rdap.lookup`** (rdap, recon · passive) — structured WHOIS over RDAP/HTTPS
+  (RFC 9083) for domains and IPs: registrar, status, key dates, abuse contact,
+  nameservers, DNSSEC. Flags near/expired domains. New `rdap` extension.
+- **`cert.ctlog`** (tls, recon · passive) — Certificate Transparency history via
+  crt.sh: issuers, timeline, and observed names (optionally the full SAN/CN set).
+- **`web.security_txt`** (web, recon · active) — parses security.txt (RFC 9116);
+  flags an expired disclosure policy.
+- **`web.well_known`** (web, recon · active) — enumerates well-known URIs
+  (OAuth/OpenID discovery, MTA-STS, change-password, app-association).
+- **`http.favicon_hash`** (web, recon · active) — Shodan/Censys favicon hash
+  (mmh3) for pivoting to related infrastructure.
+- **`dns.zone_transfer`** (dns, recon · active) — attempts AXFR against each
+  authoritative nameserver; **critical** finding if any allows the transfer.
+- **`smtp.probe`** (email, scanning · active) — SMTP EHLO probe (STARTTLS, AUTH
+  mechanisms, cleartext-auth flag) with an optional read-only open-relay
+  heuristic that aborts before DATA.
+- **`ssh.audit`** (ssh, scanning · active) — parses the SSH banner + KEXINIT and
+  flags weak/deprecated cipher/KEX/MAC/host-key algorithms (no authentication).
+  New `ssh` extension.
+
+### Changed
+
+- Self-test playbook now exercises 51/51 executors; schema `uses`-enum
+  regenerated; extension versions bumped (web, dns, tls, email).
+
 ## [0.10.0] - 2026-06-03
 
 Phase 6 — tool expansion. Three keyless executors (43 total across 13 extensions).

@@ -1,22 +1,38 @@
 # Roadmap
 
-This document tracks planned executors, features, playbooks, and integrations. Items are grouped by phase — Phase 1 is the immediate next focus, later phases are directional.
+This document tracks shipped work and what's planned next. The "next up" backlog below is the live list; earlier phases are recorded for history.
 
 ---
 
-## Current state — v0.8.0
+## Current state — v0.11.0
 
 | Area | Status |
 | ------ | -------- |
-| **43 executors across 13 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| **51 executors across 15 extensions** (recon · scanning · gaining-access) | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
-| MCP server with catalog-driven tool registration (60 tools) + `cats_capabilities` | ✅ Done |
+| **Phase 5 hardening**: CI + LICENSE, passive-only `--passive`, target-aware `auto`, phase-grouped reports | ✅ Done |
+| **Phase 6 expansion**: `vuln.epss`, `http.graphql`, `dns.txt_fingerprint` | ✅ Done |
+| **Phase 7 expansion**: `rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit` (+ `rdap`/`ssh` extensions) | ✅ Done |
+| MCP server with catalog-driven tool registration (68 tools) + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
 | Full documentation suite + user guide + GitHub wiki source | ✅ Done |
+
+---
+
+## Next up — candidate backlog
+
+Implementation-ready (keyless, fit existing patterns) unless marked otherwise:
+
+- **More tools** — `web.screenshot` (headless, needs a browser dependency — decision pending), deeper service probes (SMB/SNMP), more cloud providers + bucket object/ACL listing.
+- **Key-gated intel** — `hunter.io` email harvesting and similar, via the no-op-without-key pattern.
+- **Ecosystem** — a starter `cyberagent-ext-*` template repo; publish to npm.
+- **Hardening** — enforce the `permissions` manifest at runtime (block undeclared egress/env from third-party plugins).
+
+> **Explicitly out of scope, by design:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`).
 
 ---
 
@@ -79,14 +95,14 @@ detailed spec below.
 | Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
 | Nuclei template scan | `nuclei.scan` | ✅ | — |
 
-**Today: 43 executors live** across 13 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
+**Today: 51 executors live** across 15 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.
 
 ---
 
-## Phase 1 — Deeper intelligence  *(next)*
+## Phase 1 — Deeper intelligence  *(shipped in v0.4.0)*
 
 ### New executors for phase 1
 
@@ -363,23 +379,17 @@ NOTIFY_ON_SEVERITY=high,critical
 
 ## Phase 4 — Community and ecosystem
 
-### Plugin system for custom executors
+### Plugin system for custom executors  *(shipped)*
 
-Package and share executors as npm plugins. Install a community executor with one command:
+Executors ship as installable extensions. Local modules live under `extensions/`, and npm packages named `cyberagent-ext-*` / `@cyberagent/ext-*` auto-register at load — they appear in the catalog and the MCP tool list with no core changes.
 
-```bash
-npm install cyberagent-executor-nikto
-```
+### SecurityTrails integration  *(shipped in v0.8.0)*
 
-It auto-registers in `runner.js` and appears in the MCP tool list.
+`securitytrails.subdomains` / `securitytrails.dns_history` enrich DNS and subdomain results with historical data — useful for old infrastructure, shadow IT, and change-over-time. Key-gated (`SECURITYTRAILS_API_KEY`), no-op without the key.
 
-### SecurityTrails integration
+### Nuclei integration  *(shipped in v0.8.0)*
 
-Enrich DNS and subdomain results with SecurityTrails historical data — useful for finding old infrastructure, shadow IT, and infrastructure changes over time. Requires a SecurityTrails API key.
-
-### Nuclei integration
-
-Run [Nuclei](https://github.com/projectdiscovery/nuclei) templates against a target and return structured findings. Nuclei has thousands of community-maintained templates covering CVEs, misconfigs, and exposed panels.
+`nuclei.scan` runs [Nuclei](https://github.com/projectdiscovery/nuclei) templates against a target and returns structured, severity-rated findings — thousands of community templates covering CVEs, misconfigs, and exposed panels. No-op note if the binary is absent.
 
 ```yaml
 - name: Nuclei Scan
@@ -389,11 +399,11 @@ Run [Nuclei](https://github.com/projectdiscovery/nuclei) templates against a tar
     severity: ["critical", "high", "medium"]
 ```
 
-### Web dashboard
+### Web dashboard  *(not yet built)*
 
 A local web UI served by the MCP server for browsing historical runs, comparing reports, and triggering new scans — without needing the CLI.
 
-### Authentication-aware scanning
+### Authentication-aware scanning  *(not yet built)*
 
 Support for scanning behind login walls — cookie injection, Bearer token headers, Basic Auth — so web security checks can reach authenticated content.
 

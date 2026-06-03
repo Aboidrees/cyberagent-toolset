@@ -4,8 +4,8 @@
 
 CyberAgentToolSet (CATS) — formerly `mcp-recon-runner` — is an MCP server **and** CLI that orchestrates **authorized** security assessments across the attack lifecycle. Capabilities ship as installable **extensions** (domain modules), the core is a small **engine + catalog**, and everything is driven by YAML playbooks and the Model Context Protocol so Claude (or any MCP client) can run it conversationally.
 
-- **Version:** v0.10.0
-- **Scale:** 43 executors across 13 extensions → 60 MCP tools (43 executors + 13 playbooks + 4 orchestration)
+- **Version:** v0.11.0
+- **Scale:** 51 executors across 15 extensions → 68 MCP tools (51 executors + 13 playbooks + 4 orchestration)
 - **Repo:** [github.com/Aboidrees/cyberagent-toolset](https://github.com/Aboidrees/cyberagent-toolset) (public)
 - **Wiki:** live at `/wiki` (15 pages)
 - **Keyless by default;** optional keys add enrichment; runs as CLI or MCP server.
@@ -20,7 +20,7 @@ npm run mcp                                                                 # MC
 
 ## 2. The journey — how it got here
 
-It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute). Across this engagement it went through five major bodies of work:
+It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdomains, ping, traceroute). Across this engagement it went through several major bodies of work:
 
 | Stage | Version | Headline | Result |
 | ----- | ------- | -------- | ------ |
@@ -30,13 +30,14 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | Refactor → CyberAgentToolSet (CATS) | 0.7.0 | Rename + extension architecture (domain-first, catalog-driven, local + npm plugins); .env auto-loading; user guide; full wiki source | PR #3 merged |
 | Phase 4 — Tool expansion | 0.8.0 | +17 executors (keyless batch +12, key-gated intel +4) + Nuclei multiplier; 40/40 self-test; wiki published | PR #4 merged |
 | Phase 5 — Hardening + safe mode | 0.9.0 | CI + LICENSE; passive-only `--passive`; target-aware `auto`; `capabilities` listing; phase-grouped reports | PR #5 merged |
-| Phase 6 — Tool expansion | 0.10.0 | +3 keyless executors (`vuln.epss`, `http.graphql`, `dns.txt_fingerprint`); 43/43 self-test | PR #6 open |
+| Phase 6 — Tool expansion | 0.10.0 | +3 keyless executors (`vuln.epss`, `http.graphql`, `dns.txt_fingerprint`); 43/43 self-test | PR #6 merged |
+| Phase 7 — Tool expansion | 0.11.0 | +8 keyless executors (`rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit`) + `rdap`/`ssh` extensions; 51/51 self-test | PR #9 open |
 
 ## 3. Architecture (current)
 
 **Core = engine + catalog. Nothing hardcodes executors anymore.**
 
-- **Extensions = domain modules** under `extensions/<domain>/`. Each ships an `index.js` descriptor (the "manifest") declaring its executors, plus `src/*.js` implementations and an optional `report.js` that owns its findings extraction. The 13 domains: `dns, whois, email, ip-intel, threat-intel, securitytrails, censys, github-leaks, network, web, tls, cloud, nuclei`.
+- **Extensions = domain modules** under `extensions/<domain>/`. Each ships an `index.js` descriptor (the "manifest") declaring its executors, plus `src/*.js` implementations and an optional `report.js` that owns its findings extraction. The 15 domains: `dns, whois, rdap, email, ip-intel, threat-intel, securitytrails, censys, github-leaks, network, web, tls, ssh, cloud, nuclei`.
 - **Classification metadata** on every executor: `phase` (reconnaissance / scanning / gaining-access), `posture` (passive / active), `domain`, `targetTypes` (domain/ip/cidr/url/email), and `permissions` (network egress, env keys, bins). This is decoupled from the `uses:` key — reclassifying never changes the key, so playbooks never churn.
 - **Loader** (`src/extensions/loader.js`) — `loadCatalog()` discovers descriptors and builds the `uses → run` registry, executor metadata, report owners, and phase/domain views. Memoized.
 - **Discovery, two sources:** local `extensions/` (out of the box) and npm packages named `cyberagent-ext-*` / `@cyberagent/ext-*` (auto-registered — proven end-to-end).
@@ -45,20 +46,20 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 - **MCP server** (`src/mcp-server.js`) — generates one `cats_<uses>` tool per executor + `cats_capabilities` (live phase/posture/domain view) + orchestration (`cats_topics/run/run_multi`) + per-playbook tools (`cats_play__<id>`).
 - **Out of scope by design:** `maintaining-access` (post-exploitation) and `covering-tracks` (anti-forensics) are vocabulary only — never implemented, keeping the tool on the right side of the dual-use line.
 
-## 4. The 43 executors
+## 4. The 51 executors
 
 **Reconnaissance — passive** (no packets to the target host):
-`dns.resolve` · `dns.reverse` · `dns.dnssec` · `dns.caa` · `dns.txt_fingerprint` · `subdomains.passive` · `whois.lookup` · `email.security` · `ip.intel` · `shodan.host`\* · `vuln.cve_lookup` · `vuln.epss` · `web.wayback` · `securitytrails.subdomains`\* · `securitytrails.dns_history`\* · `censys.host`\* · `github.leaks`\*
+`dns.resolve` · `dns.reverse` · `dns.dnssec` · `dns.caa` · `dns.txt_fingerprint` · `subdomains.passive` · `whois.lookup` · `rdap.lookup` · `cert.ctlog` · `email.security` · `ip.intel` · `shodan.host`\* · `vuln.cve_lookup` · `vuln.epss` · `web.wayback` · `securitytrails.subdomains`\* · `securitytrails.dns_history`\* · `censys.host`\* · `github.leaks`\*
 
 **Scanning / active recon:**
-`subdomains.bruteforce` · `http.robots` · `network.ping` · `network.traceroute` · `nmap.scan` · `nmap.udp` · `nmap.os` · `network.banner` · `http.headers` · `http.get` · `http.security_score` · `http.waf_detect` · `http.fingerprint` · `http.cors_check` · `http.methods` · `http.cookies` · `http.open_redirect` · `http.subdomain_takeover` · `http.graphql` · `tls.inspect` · `tls.deep` · `nuclei.scan` (thousands of templates)
+`subdomains.bruteforce` · `dns.zone_transfer` · `http.robots` · `web.security_txt` · `web.well_known` · `http.favicon_hash` · `network.ping` · `network.traceroute` · `nmap.scan` · `nmap.udp` · `nmap.os` · `network.banner` · `ssh.audit` · `smtp.probe` · `http.headers` · `http.get` · `http.security_score` · `http.waf_detect` · `http.fingerprint` · `http.cors_check` · `http.methods` · `http.cookies` · `http.open_redirect` · `http.subdomain_takeover` · `http.graphql` · `tls.inspect` · `tls.deep` · `nuclei.scan` (thousands of templates)
 
 **Gaining access — read-only exposure:**
 `http.fuzz_paths` · `http.git_leak` · `http.secrets` · `cloud.bucket_finder`
 
 > `*` = key-gated (no-op note until the key is set). Nuclei needs the `nuclei` binary (no-op without it).
 
-**Phase split:** reconnaissance 19 · scanning 20 · gaining-access 4.
+**Phase split:** reconnaissance 25 · scanning 22 · gaining-access 4.
 
 ## 5. Production playbooks
 
@@ -79,7 +80,7 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | `owasp-top10-recon` | Recon mapped to each OWASP Top 10 category |
 | `cloud-security-assessment` | Cloud hosting · storage exposure · edge config |
 
-Plus **`all-tools-selftest`** (diagnostic — exercises all 43 executors) and **`_template.yaml`** (authoring skeleton).
+Plus **`all-tools-selftest`** (diagnostic — exercises all 51 executors) and **`_template.yaml`** (authoring skeleton).
 
 ## 6. Automation, reporting, and config
 
@@ -110,7 +111,7 @@ A security tool's own safety matters. CATS:
 src/            engine — index.js (CLI) · mcp-server.js · runner.js · sdk.js · env.js
                 diff.js · watch.js · schedule.js · report.js
                 extensions/loader.js · utils/ (findings · validate · os · fsx · logger · playbooks)
-extensions/     13 domain modules — each: index.js (descriptor) + src/*.js + report.js
+extensions/     15 domain modules — each: index.js (descriptor) + src/*.js + report.js
 playbooks/      13 YAML playbooks + _template.yaml
 watchlists/     batch target lists (example.yaml)
 schemas/        playbook/watchlist JSON Schemas + build.mjs
@@ -121,16 +122,16 @@ runs/           generated reports (gitignored)
 
 ## 9. Documentation & wiki
 
-- **In-repo docs:** `architecture.md`, `user-guide.md` (scenario-driven), `executors.md` (all 43), `playbooks.md`, `creating-playbooks.md` (extension authoring), `configuration.md`, `installation.md`, `mcp-integration.md`, `troubleshooting.md`, `roadmap.md`, plus README and CHANGELOG.
+- **In-repo docs:** `architecture.md`, `user-guide.md` (scenario-driven), `executors.md` (all 51), `playbooks.md`, `creating-playbooks.md` (extension authoring), `configuration.md`, `installation.md`, `mcp-integration.md`, `troubleshooting.md`, `roadmap.md`, plus README and CHANGELOG.
 - **GitHub wiki (live):** 15 pages — Home, Quick Start, User Guide, CLI Reference, Playbooks, Executors, Extensions, API Keys, MCP Integration, Architecture, Automation, Troubleshooting, FAQ, Installation, Sidebar. Source lives in `wiki/`; `wiki/publish.sh` syncs it.
 
 ## 10. Verification posture
 
-The project has **no automated test framework by design** (executors are live-network). The regression oracle is the `all-tools-selftest` playbook, which exercises every executor once — currently **43/43 green**. Every phase kept it green; every executor was also smoke-tested live; the MCP server boots clean; `node --check` passes on all source; npm-plugin discovery was proven with a throwaway extension. Each phase shipped via its own PR with an adversarial pre-landing review (which caught real bugs: SSRF/host-override in URL building, ASN injection, TLS timer leaks, the CONNECT-method hang, multi-request timeout coupling, banner SYN-drop hang).
+The project has **no automated test framework by design** (executors are live-network). The regression oracle is the `all-tools-selftest` playbook, which exercises every executor once — currently **51/51 green**. Every phase kept it green; every executor was also smoke-tested live; the MCP server boots clean; `node --check` passes on all source; npm-plugin discovery was proven with a throwaway extension. Each phase shipped via its own PR with an adversarial pre-landing review (which caught real bugs: SSRF/host-override in URL building, ASN injection, TLS timer leaks, the CONNECT-method hang, multi-request timeout coupling, banner SYN-drop hang).
 
 ## 11. Known limitations & honest gaps
 
-- **No unit/integration tests** — by design (live-network); the 43/43 self-test is the oracle, but it needs network and isn't a substitute for fast unit tests.
+- **No unit/integration tests** — by design (live-network); the 51/51 self-test is the oracle, but it needs network and isn't a substitute for fast unit tests.
 - **CI** *(added v0.9.0)* — GitHub Actions runs a deterministic validate gate + a self-test smoke job on every PR.
 - **License** *(added v0.9.0)* — a `LICENSE` file (MIT) is now committed.
 - **Not published to npm** — install is `git clone`; the `cyberagent-ext-*` plugin convention works, but no extension is on the registry yet and there's no starter-template repo.
@@ -141,13 +142,13 @@ The project has **no automated test framework by design** (executors are live-ne
 
 ## 12. Where things stand
 
-- **Merged to `main`:** Phases 1+2 (PR #1), Phase 3 (PR #2), CATS refactor (PR #3), Phase 4 expansion (PR #4).
-- **Open:** PR #5 — Phase 5 hardening (CI, LICENSE) + safe mode (`--passive`), `auto`, `capabilities`, phase-grouped reports. Awaiting review/merge.
+- **Merged to `main`:** Phases 1+2 (PR #1), Phase 3 (PR #2), CATS refactor (PR #3), Phase 4 (PR #4), Phase 5 hardening (PR #5), Phase 6 expansion (PR #6).
+- **Open:** PR #9 — Phase 7 tool expansion (+8 keyless executors, `rdap`/`ssh` extensions). Awaiting review/merge.
 - Repo is public; wiki is live and current.
 
 ## 13. The plan / roadmap forward
 
-**Immediate:** merge PR #4.
+**Immediate:** merge PR #9 (Phase 7).
 
 **Capabilities the metadata already unlocks** (cheap follow-ups, not yet built):
 
@@ -157,7 +158,7 @@ The project has **no automated test framework by design** (executors are live-ne
 
 **More tools** (the architecture makes each a small descriptor):
 
-- Service-specific probes (SMB/SNMP/SSH/SMTP deeper), web screenshotting (headless), more cloud providers and bucket object/ACL listing. *(GraphQL introspection, TXT SaaS fingerprinting, and EPSS scoring shipped in Phase 6.)*
+- Deeper service probes (SMB/SNMP), web screenshotting (headless), more cloud providers and bucket object/ACL listing. *(GraphQL introspection, TXT fingerprinting, EPSS scoring shipped in Phase 6; RDAP, CT-log history, security.txt/well-known, favicon hashing, AXFR, SMTP + SSH audits shipped in Phase 7.)*
 - More key-gated intel providers (e.g. hunter.io email harvesting) following the established no-op-without-key pattern.
 - Deeper Nuclei wiring (template management, tag presets).
 
@@ -168,7 +169,7 @@ The project has **no automated test framework by design** (executors are live-ne
 
 > **Explicitly not on the roadmap:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`) — out of scope by design.
 
-**Trajectory at a glance:** 9 → 16 → 23 → (refactor) → 40 → 43 executors + Nuclei (≈thousands of checks), with the cost of adding the next tool now near-zero thanks to the extension model.
+**Trajectory at a glance:** 9 → 16 → 23 → (refactor) → 40 → 43 → 51 executors + Nuclei (≈thousands of checks), with the cost of adding the next tool now near-zero thanks to the extension model.
 
 ---
 
@@ -183,8 +184,8 @@ The project has **no automated test framework by design** (executors are live-ne
 
 ### Capabilities
 
-- **Executor** — the atomic unit of capability: one self-contained check or action (resolve DNS, grade security headers, probe for open redirect, …). Takes a target plus options and returns structured data, optionally including findings. Addressed by a stable `uses` key and tagged with classification metadata. There are 43.
-- **Extension** — a domain module packaging one or more related executors (e.g. the `web` extension ships all the `http.*` executors), with their shared helper code and an optional report module. The unit of distribution: a local folder under `extensions/`, or an npm package. There are 13.
+- **Executor** — the atomic unit of capability: one self-contained check or action (resolve DNS, grade security headers, probe for open redirect, …). Takes a target plus options and returns structured data, optionally including findings. Addressed by a stable `uses` key and tagged with classification metadata. There are 51.
+- **Extension** — a domain module packaging one or more related executors (e.g. the `web` extension ships all the `http.*` executors), with their shared helper code and an optional report module. The unit of distribution: a local folder under `extensions/`, or an npm package. There are 15.
 - **Descriptor** (a.k.a. manifest) — the object an extension's `index.js` default-exports. Declares the extension's name/version/domain/description, the executors with their metadata and run functions, the permissions it needs, and an optional report module. This is what the loader reads to register everything.
 - **Domain** — the capability area an extension covers (dns, web, tls, cloud, network, nuclei, …). The organizing/folder dimension; related code stays together for cohesion.
 - **Report module** (`report.js`) — an extension-owned function `findings(stepOutput)` that turns one executor's raw result into severity-rated findings. The engine calls each extension's report module and aggregates the results, so domain knowledge stays with the domain.
@@ -210,7 +211,7 @@ The project has **no automated test framework by design** (executors are live-ne
 
 - **MCP (Model Context Protocol)** — the open protocol that lets an AI client (such as Claude) call local tools over a stdio JSON-RPC stream. It is how CATS plugs into Claude.
 - **MCP server** (`src/mcp-server.js`) — the process that exposes CATS capabilities as MCP tools so Claude can drive the whole workflow conversationally.
-- **Tool (MCP tool)** — a single callable exposed to the MCP client. CATS publishes one `cats_<uses>` tool per executor, one `cats_play__<id>` per playbook, and the orchestration tools. 60 in total today.
+- **Tool (MCP tool)** — a single callable exposed to the MCP client. CATS publishes one `cats_<uses>` tool per executor, one `cats_play__<id>` per playbook, and the orchestration tools. 68 in total today.
 - **Orchestration tools** — the non-executor MCP tools: `cats_capabilities` (list every executor by phase/posture/domain), `cats_topics` (list playbooks), `cats_run` and `cats_run_multi` (run one or many playbooks).
 - **CLI** — the command-line interface (`src/index.js`, installed bin `cyberagent`). Subcommands: `run` (default), `diff`, `watch`, `schedule`, `report`.
 
@@ -244,4 +245,4 @@ The project has **no automated test framework by design** (executors are live-ne
 
 - **Nuclei** — an external open-source scanner with thousands of community-maintained templates (CVEs, exposures, misconfigurations, takeovers, default creds). CATS wraps it as the `nuclei.scan` executor — the "multiplier," because one executor pulls in that whole template library. No-ops with a note when the `nuclei` binary isn't installed.
 - **Template (Nuclei)** — a single Nuclei check definition (one CVE, one exposure rule, etc.). Nuclei ships thousands; `nuclei.scan` runs the chosen set against the target.
-- **Self-test / regression oracle** — the `all-tools-selftest` playbook, which exercises every executor exactly once. Because the project intentionally has no unit-test framework (the checks are live-network), this playbook passing 43/43 is the main correctness signal after any change.
+- **Self-test / regression oracle** — the `all-tools-selftest` playbook, which exercises every executor exactly once. Because the project intentionally has no unit-test framework (the checks are live-network), this playbook passing 51/51 is the main correctness signal after any change.

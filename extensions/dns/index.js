@@ -1,11 +1,12 @@
 import { resolveDNS, reverseDNS } from './src/dns.js';
 import { passive } from './src/subdomains.js';
 import { dnssec, caa, bruteforce, txtFingerprint } from './src/advanced.js';
+import { zoneTransfer } from './src/zonetransfer.js';
 
 /** DNS reconnaissance — records, reverse/PTR sweeps, passive subdomains. */
 export default {
   name: 'dns',
-  version: '1.1.0',
+  version: '1.2.0',
   domain: 'dns',
   description: 'DNS reconnaissance — records, reverse/PTR sweeps, passive subdomains, DNSSEC, CAA, and subdomain brute-force.',
   permissions: { network: ['dns', 'https'], env: [], bins: [] },
@@ -84,6 +85,18 @@ export default {
       summary: 'Fingerprint the SaaS / vendor footprint from TXT domain-verification tokens.',
       run: txtFingerprint,
       inputSchema: { target: { type: 'string', description: 'Domain' } },
+    },
+    {
+      uses: 'dns.zone_transfer',
+      phase: 'reconnaissance',
+      posture: 'active',
+      targetTypes: ['domain'],
+      summary: 'Attempt AXFR zone transfer against each authoritative NS (flags critical if allowed).',
+      run: zoneTransfer,
+      inputSchema: {
+        target: { type: 'string', description: 'Domain' },
+        timeoutMs: { type: 'number', description: 'Per-nameserver timeout ms. Default: 8000' },
+      },
     },
   ],
 };

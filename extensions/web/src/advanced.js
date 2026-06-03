@@ -240,3 +240,181 @@ export async function graphql(target, opts = {}) {
 
   return { target: host, pathsTried: paths.length, endpoints, introspectionExposed: findings.length > 0, findings };
 }
+
+// ── web.security_txt ─────────────────────────────────────────────────────────
+/**
+ * Fetch and parse a site's security.txt (RFC 9116). Checks the canonical
+ * `/.well-known/security.txt` first, then the legacy `/security.txt`. Surfaces
+ * the disclosure contact/policy and flags an expired policy.
+ */
+export async function securityTxt(target, opts = {}) {
+  const host = validateTarget(target);
+  const scheme = opts.scheme === 'http' ? 'http' : 'https';
+  const candidates = ['/.well-known/security.txt', '/security.txt'];
+
+  for (const path of candidates) {
+    const url = buildUrl(scheme, host, path);
+    let res;
+    try {
+      res = await axios.get(url, {
+        timeout: opts.timeoutMs || 10000,
+        validateStatus: () => true,
+        maxRedirects: 3,
+        maxContentLength: 200_000,
+        responseType: 'text',
+      });
+    } catch { continue; }
+
+    const body = typeof res.data === 'string' ? res.data : '';
+    const ct = String(res.headers?.['content-type'] || '');
+    // A real security.txt is text/plain and contains at least a Contact field.
+    if (res.status !== 200 || !/contact:/i.test(body)) continue;
+
+    const fields = {};
+    for (const line of body.split(/\r?\n/)) {
+      const m = /^([A-Za-z-]+):\s*(.+)$/.exec(line.trim());
+      if (!m || line.trim().startsWith('#')) continue;
+      const key = m[1].toLowerCase();
+      (fields[key] ||= []).push(m[2].trim());
+    }
+
+    const findings = [];
+    const expires = fields.expires?.[0];
+    if (expires) {
+      const exp = Date.parse(expires);
+      if (!Number.isNaN(exp) && exp < Date.parse(res.headers?.date || '') ) {
+        findings.push({ severity: 'low', message: `security.txt expired (${expires})` });
+      }
+    }
+    return {
+      target: host, found: true, url, contentType: ct,
+      contact: fields.contact || [],
+      policy: fields.policy || [],
+      expires: expires || null,
+      encryption: fields.encryption || [],
+      fields, findings,
+    };
+  }
+
+  return { target: host, found: false, url: buildUrl(scheme, host, candidates[0]), findings: [] };
+}
+
+// ── web.well_known ───────────────────────────────────────────────────────────
+const WELL_KNOWN_PATHS = [
+  '/.well-known/security.txt',
+  '/.well-known/mta-sts.txt',
+  '/.well-known/change-password',
+  '/.well-known/openid-configuration',
+  '/.well-known/oauth-authorization-server',
+  '/.well-known/assetlinks.json',
+  '/.well-known/apple-app-site-association',
+  '/.well-known/host-meta',
+  '/.well-known/nodeinfo',
+  '/.well-known/gpc.json',
+  '/.well-known/dnt-policy.txt',
+];
+/**
+ * Enumerate well-known URIs (RFC 8615). Surfaces policy/config endpoints a site
+ * exposes — notably OAuth/OpenID discovery (auth surface) and MTA-STS/security
+ * policies. Active: one HEAD/GET per path, concurrency-bounded.
+ */
+export async function wellKnown(target, opts = {}) {
+  const host = validateTarget(target);
+  const scheme = opts.scheme === 'http' ? 'http' : 'https';
+  const timeoutMs = opts.timeoutMs || 8000;
+
+  const probe = async (path) => {
+    const url = buildUrl(scheme, host, path);
+    try {
+      const res = await axios.get(url, {
+        timeout: timeoutMs, validateStatus: () => true,
+        maxRedirects: 2, maxContentLength: 300_000, responseType: 'text',
+      });
+      return {
+        path, url, status: res.status,
+        contentType: String(res.headers?.['content-type'] || '').split(';')[0] || null,
+        bytes: typeof res.data === 'string' ? res.data.length : 0,
+        present: res.status >= 200 && res.status < 300,
+      };
+    } catch {
+      return { path, url, status: null, present: false };
+    }
+  };
+
+  const results = [];
+  for (const p of WELL_KNOWN_PATHS) results.push(await probe(p));
+  const present = results.filter(r => r.present);
+
+  const findings = [];
+  for (const r of present) {
+    if (r.path.includes('openid-configuration') || r.path.includes('oauth-authorization-server')) {
+      findings.push({ severity: 'info', message: `Auth discovery endpoint exposed: ${r.path}` });
+    }
+  }
+
+  return { target: host, probed: results.length, presentCount: present.length, endpoints: present, findings };
+}
+
+// ── http.favicon_hash ────────────────────────────────────────────────────────
+/** MurmurHash3 x86_32 (seed 0), signed — the hash Shodan/Censys index favicons by. */
+function murmur3_32(bytes, seed = 0) {
+  let h = seed >>> 0;
+  const len = bytes.length;
+  const nblocks = len >> 2;
+  let k;
+  for (let i = 0; i < nblocks; i++) {
+    const j = i * 4;
+    k = (bytes[j] & 0xff) | ((bytes[j + 1] & 0xff) << 8) | ((bytes[j + 2] & 0xff) << 16) | ((bytes[j + 3] & 0xff) << 24);
+    k = Math.imul(k, 0xcc9e2d51); k = (k << 15) | (k >>> 17); k = Math.imul(k, 0x1b873593);
+    h ^= k; h = (h << 13) | (h >>> 19); h = (Math.imul(h, 5) + 0xe6546b64) | 0;
+  }
+  k = 0;
+  const tail = nblocks * 4;
+  switch (len & 3) {
+    case 3: k ^= (bytes[tail + 2] & 0xff) << 16; // falls through
+    case 2: k ^= (bytes[tail + 1] & 0xff) << 8;  // falls through
+    case 1: k ^= (bytes[tail] & 0xff);
+      k = Math.imul(k, 0xcc9e2d51); k = (k << 15) | (k >>> 17); k = Math.imul(k, 0x1b873593); h ^= k;
+  }
+  h ^= len;
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return h | 0;
+}
+/**
+ * Compute the Shodan/Censys favicon hash for a target. Replicates Python
+ * `mmh3.hash(base64.encodebytes(favicon))` so the result can be pivoted on
+ * (`http.favicon.hash:<n>`) to find other hosts serving the same favicon —
+ * a cheap way to map related infrastructure. Keyless.
+ */
+export async function faviconHash(target, opts = {}) {
+  const host = validateTarget(target);
+  const scheme = opts.scheme === 'http' ? 'http' : 'https';
+  const url = buildUrl(scheme, host, opts.path || '/favicon.ico');
+
+  let res;
+  try {
+    res = await axios.get(url, {
+      timeout: opts.timeoutMs || 10000, validateStatus: () => true,
+      maxRedirects: 5, responseType: 'arraybuffer', maxContentLength: 5_000_000,
+    });
+  } catch (e) {
+    return { target: host, url, error: e.message, hash: null };
+  }
+  if (res.status !== 200 || !res.data || !res.data.byteLength) {
+    return { target: host, url, status: res.status, found: false, hash: null };
+  }
+
+  const buf = Buffer.from(res.data);
+  // Python base64.encodebytes: 76-char lines, each newline-terminated.
+  const b64 = buf.toString('base64');
+  let mime = '';
+  for (let i = 0; i < b64.length; i += 76) mime += b64.slice(i, i + 76) + '\n';
+
+  return {
+    target: host, url, status: res.status, found: true,
+    bytes: buf.length,
+    contentType: String(res.headers?.['content-type'] || '').split(';')[0] || null,
+    hash: murmur3_32(Buffer.from(mime, 'ascii'), 0),
+    shodanQuery: `http.favicon.hash:${murmur3_32(Buffer.from(mime, 'ascii'), 0)}`,
+  };
+}
