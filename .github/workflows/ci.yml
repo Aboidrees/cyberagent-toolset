@@ -28,13 +28,16 @@ jobs:
       - name: Validate catalog, playbooks, watchlists, schema
         run: node scripts/ci-validate.mjs
 
+      - name: Unit tests (parsers, entities, pivots, synthesis — no network)
+        run: npm test
+
       - name: MCP server boots and lists tools
         run: |
           out=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null)
           echo "$out" | node -e '
             let d=""; process.stdin.on("data",c=>d+=c).on("end",()=>{
               const tools = JSON.parse(d).result.tools;
-              if (!tools || tools.length < 40) { console.error("Expected >= 40 tools, got", tools && tools.length); process.exit(1); }
+              if (!tools || tools.length < 80) { console.error("Expected >= 80 tools, got", tools && tools.length); process.exit(1); }
               console.log(tools.length, "MCP tools registered");
             });'
 
