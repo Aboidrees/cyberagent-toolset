@@ -60,6 +60,7 @@
               "dns.dnssec",
               "dns.resolve",
               "dns.reverse",
+              "dns.txt_fingerprint",
               "email.security",
               "github.leaks",
               "http.cookies",
@@ -68,6 +69,7 @@
               "http.fuzz_paths",
               "http.get",
               "http.git_leak",
+              "http.graphql",
               "http.headers",
               "http.methods",
               "http.open_redirect",
@@ -92,6 +94,7 @@
               "tls.deep",
               "tls.inspect",
               "vuln.cve_lookup",
+              "vuln.epss",
               "web.wayback",
               "whois.lookup"
             ]

@@ -1,6 +1,6 @@
 import { resolveDNS, reverseDNS } from './src/dns.js';
 import { passive } from './src/subdomains.js';
-import { dnssec, caa, bruteforce } from './src/advanced.js';
+import { dnssec, caa, bruteforce, txtFingerprint } from './src/advanced.js';
 
 /** DNS reconnaissance — records, reverse/PTR sweeps, passive subdomains. */
 export default {
@@ -75,6 +75,15 @@ export default {
         wordlist: { type: 'array', items: { type: 'string' }, description: 'Custom subdomain list (optional)' },
         concurrency: { type: 'number', description: 'Parallel lookups. Default: 20' },
       },
+    },
+    {
+      uses: 'dns.txt_fingerprint',
+      phase: 'reconnaissance',
+      posture: 'passive',
+      targetTypes: ['domain'],
+      summary: 'Fingerprint the SaaS / vendor footprint from TXT domain-verification tokens.',
+      run: txtFingerprint,
+      inputSchema: { target: { type: 'string', description: 'Domain' } },
     },
   ],
 };

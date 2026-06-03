@@ -188,3 +188,55 @@ export async function cookies(target, opts = {}) {
   });
   return { url, status: res.status, count: cookieReport.length, cookies: cookieReport, findings };
 }
+
+// ── http.graphql ─────────────────────────────────────────────────────────────
+const INTROSPECTION_QUERY = JSON.stringify({
+  query: '{__schema{queryType{name} mutationType{name} types{name kind}}}',
+});
+const GRAPHQL_PATHS = ['/graphql', '/api/graphql', '/v1/graphql', '/graphql/v1', '/query', '/api'];
+
+/**
+ * Detect a GraphQL endpoint and whether introspection is exposed — sends the
+ * introspection query to common paths and reports any that return a schema.
+ * Introspection in production leaks the full API surface.
+ */
+export async function graphql(target, opts = {}) {
+  const host = validateTarget(target);
+  const scheme = opts.scheme || 'https';
+  const paths = opts.path ? [opts.path] : GRAPHQL_PATHS;
+  const endpoints = [];
+
+  for (const p of paths) {
+    let url;
+    try { url = buildUrl(scheme, host, p); } catch { continue; }
+    try {
+      const res = await axios.post(url, INTROSPECTION_QUERY, {
+        timeout: opts.timeoutMs || 8000,
+        validateStatus: () => true,
+        maxRedirects: 0,
+        maxContentLength: 5_000_000,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const schema = res.data?.data?.__schema;
+      if (schema && Array.isArray(schema.types)) {
+        endpoints.push({
+          path: p,
+          introspection: true,
+          typeCount: schema.types.length,
+          queryType: schema.queryType?.name || null,
+          mutationType: schema.mutationType?.name || null,
+          sampleTypes: schema.types.filter(t => t.kind === 'OBJECT' && !t.name.startsWith('__')).slice(0, 15).map(t => t.name),
+        });
+      } else if (typeof res.data === 'object' && (res.data.errors || res.data.data !== undefined)) {
+        // Responded like GraphQL but introspection is disabled — still worth noting.
+        endpoints.push({ path: p, introspection: false });
+      }
+    } catch { /* not a GraphQL endpoint here */ }
+  }
+
+  const findings = endpoints
+    .filter(e => e.introspection)
+    .map(e => ({ severity: 'medium', message: `GraphQL introspection exposed at ${e.path} (${e.typeCount} types)` }));
+
+  return { target: host, pathsTried: paths.length, endpoints, introspectionExposed: findings.length > 0, findings };
+}
