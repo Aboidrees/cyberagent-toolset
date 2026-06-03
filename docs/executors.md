@@ -673,11 +673,11 @@ HTTP methods audit — reads the `OPTIONS` `Allow` header and actively probes ri
 
 ---
 
-# Expanded toolset (v0.8.0)
+## Expanded toolset (Phase 4+)
 
-The following executors were added in the Phase 4 expansion. Keyless unless noted.
+The following executors were added across the Phase 4–7 expansions. Keyless unless noted.
 
-## DNS
+### DNS
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
@@ -687,7 +687,7 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `dns.txt_fingerprint` | recon · passive | `timeoutMs` | `{ txtRecordCount, servicesFound, services[] }` — SaaS/vendor footprint from TXT domain-verification tokens (Google, M365, Atlassian, Stripe, …) via DNS-over-HTTPS |
 | `dns.zone_transfer` | recon · active | `timeoutMs` | `{ nameservers[], vulnerable, results[], findings }` — attempts AXFR against each authoritative NS; **critical** finding if any server allows the transfer (full-zone disclosure) |
 
-## Web
+### Web
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
@@ -702,26 +702,26 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `http.favicon_hash` | recon · active | `path`, `scheme`, `timeoutMs` | `{ found, bytes, hash, shodanQuery }` — Shodan/Censys favicon hash (mmh3) for pivoting to related infrastructure |
 | `web.wayback` | recon · passive | `limit` | Archived URLs from the Wayback Machine (queries archive.org, not the target) |
 
-## Registration & certificates
+### Registration & certificates
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `rdap.lookup` | recon · passive | `timeoutMs` | `{ kind, registrar, status[], events, nameservers[], abuseContact, dnssec, findings }` — structured WHOIS over RDAP/HTTPS (RFC 9083) for a domain or IP; flags near/expired domains |
 | `cert.ctlog` | recon · passive | `limit`, `includeSubdomains`, `timeoutMs` | `{ totalCertificates, uniqueNames, issuers[], firstSeen, lastExpiry, certificates[], findings }` — Certificate Transparency history via crt.sh |
 
-## Email — SMTP
+### Email — SMTP
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `smtp.probe` | scanning · active | `port`, `mx`, `relayTest`, `timeoutMs` | `{ mx, banner, starttls, authMechanisms[], findings }` — SMTP EHLO probe: STARTTLS support, AUTH mechanisms, cleartext-auth flag; optional read-only open-relay heuristic (aborts before DATA) |
 
-## SSH
+### SSH
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `ssh.audit` | scanning · active | `port`, `timeoutMs` | `{ banner, kexAlgorithms[], hostKeyAlgorithms[], ciphers[], macs[], weak{}, findings }` — parses the SSH banner + KEXINIT and flags weak/deprecated cipher/KEX/MAC/host-key algorithms (no auth) |
 
-## Network
+### Network
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
@@ -729,19 +729,19 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `nmap.os` | scanning · active | `timeoutMs` | OS fingerprint (`-O`). No-op note without root |
 | `network.banner` | scanning · active | `ports[]`, `requestTimeoutMs` | TCP service banner grab (SSH/FTP/SMTP/Redis/…) |
 
-## Vulnerability — Nuclei (the multiplier)
+### Vulnerability — Nuclei (the multiplier)
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `nuclei.scan` | scanning · active | `scheme`, `severity`, `tags`, `templates[]` | Runs the `nuclei` binary (thousands of templates) → severity-rated findings. No-op note if the binary is absent. Install: github.com/projectdiscovery/nuclei |
 
-## Threat intel — keyless
+### Threat intel — keyless
 
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `vuln.epss` | recon · passive | `cve` (id or comma list), `minScore`, `findingThreshold`, `timeoutMs` | `{ query, returned, results[], findings }` — EPSS exploit-probability (FIRST.org) for one or more CVEs; flags high-probability CVEs. Pair with `vuln.cve_lookup` to prioritise by real-world risk, not just CVSS |
 
-## Threat intel — key-gated (no-op without keys)
+### Threat intel — key-gated (no-op without keys)
 
 | `uses` | Key | Returns |
 | ------ | --- | ------- |

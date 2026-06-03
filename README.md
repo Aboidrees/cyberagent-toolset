@@ -112,8 +112,8 @@ cyberagent-toolset/
 │   │   └── loader.js         # Discover extensions → build the catalog
 │   └── utils/                # findings · fsx · notify · logger · os · playbooks · validate
 ├── extensions/               # Domain modules (each = one installable extension)
-│   ├── dns/ whois/ email/ ip-intel/ threat-intel/ securitytrails/ censys/ github-leaks/   # recon
-│   ├── network/ web/ tls/ nuclei/                       # scanning
+│   ├── dns/ whois/ rdap/ email/ ip-intel/ threat-intel/ securitytrails/ censys/ github-leaks/   # recon
+│   ├── network/ web/ tls/ ssh/ nuclei/                  # scanning
 │   ├── cloud/                                             # gaining-access
 │   └── <domain>/
 │       ├── index.js          # Extension Descriptor (manifest: executors + metadata)

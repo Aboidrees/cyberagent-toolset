@@ -20,7 +20,7 @@ Every executor is classified on four axes (declared as metadata, not folder path
 | ---- | ------ |
 | **phase** | `reconnaissance` · `scanning` · `gaining-access` *(`maintaining-access`, `covering-tracks` reserved, unused)* |
 | **posture** | `passive` (no packets to target) · `active` (direct contact) |
-| **domain** | `dns` · `whois` · `email` · `ip-intel` · `threat-intel` · `securitytrails` · `censys` · `github-leaks` · `network` · `web` · `tls` · `cloud` · `nuclei` |
+| **domain** | `dns` · `whois` · `rdap` · `email` · `ip-intel` · `threat-intel` · `securitytrails` · `censys` · `github-leaks` · `network` · `web` · `tls` · `ssh` · `cloud` · `nuclei` |
 | **targetTypes** | `domain` · `ip` · `cidr` · `url` · `email` (which inputs the executor accepts) |
 
 The `uses:` key (e.g. `dns.resolve`) is a **stable logical id** and the API

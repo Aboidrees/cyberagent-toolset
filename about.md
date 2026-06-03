@@ -30,8 +30,8 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | Refactor → CyberAgentToolSet (CATS) | 0.7.0 | Rename + extension architecture (domain-first, catalog-driven, local + npm plugins); .env auto-loading; user guide; full wiki source | PR #3 merged |
 | Phase 4 — Tool expansion | 0.8.0 | +17 executors (keyless batch +12, key-gated intel +4) + Nuclei multiplier; 40/40 self-test; wiki published | PR #4 merged |
 | Phase 5 — Hardening + safe mode | 0.9.0 | CI + LICENSE; passive-only `--passive`; target-aware `auto`; `capabilities` listing; phase-grouped reports | PR #5 merged |
-| Phase 6 — Tool expansion | 0.10.0 | +3 keyless executors (`vuln.epss`, `http.graphql`, `dns.txt_fingerprint`); 43/43 self-test | PR #6 open |
-| Phase 7 — Tool expansion | 0.11.0 | +8 keyless executors (`rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit`) + `rdap`/`ssh` extensions; 51/51 self-test | PR #7 open |
+| Phase 6 — Tool expansion | 0.10.0 | +3 keyless executors (`vuln.epss`, `http.graphql`, `dns.txt_fingerprint`); 43/43 self-test | PR #6 merged |
+| Phase 7 — Tool expansion | 0.11.0 | +8 keyless executors (`rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit`) + `rdap`/`ssh` extensions; 51/51 self-test | PR #9 open |
 
 ## 3. Architecture (current)
 
@@ -111,7 +111,7 @@ A security tool's own safety matters. CATS:
 src/            engine — index.js (CLI) · mcp-server.js · runner.js · sdk.js · env.js
                 diff.js · watch.js · schedule.js · report.js
                 extensions/loader.js · utils/ (findings · validate · os · fsx · logger · playbooks)
-extensions/     13 domain modules — each: index.js (descriptor) + src/*.js + report.js
+extensions/     15 domain modules — each: index.js (descriptor) + src/*.js + report.js
 playbooks/      13 YAML playbooks + _template.yaml
 watchlists/     batch target lists (example.yaml)
 schemas/        playbook/watchlist JSON Schemas + build.mjs
@@ -142,13 +142,13 @@ The project has **no automated test framework by design** (executors are live-ne
 
 ## 12. Where things stand
 
-- **Merged to `main`:** Phases 1+2 (PR #1), Phase 3 (PR #2), CATS refactor (PR #3), Phase 4 expansion (PR #4).
-- **Open:** PR #5 — Phase 5 hardening (CI, LICENSE) + safe mode (`--passive`), `auto`, `capabilities`, phase-grouped reports. Awaiting review/merge.
+- **Merged to `main`:** Phases 1+2 (PR #1), Phase 3 (PR #2), CATS refactor (PR #3), Phase 4 (PR #4), Phase 5 hardening (PR #5), Phase 6 expansion (PR #6).
+- **Open:** PR #9 — Phase 7 tool expansion (+8 keyless executors, `rdap`/`ssh` extensions). Awaiting review/merge.
 - Repo is public; wiki is live and current.
 
 ## 13. The plan / roadmap forward
 
-**Immediate:** merge PR #4.
+**Immediate:** merge PR #9 (Phase 7).
 
 **Capabilities the metadata already unlocks** (cheap follow-ups, not yet built):
 
@@ -185,7 +185,7 @@ The project has **no automated test framework by design** (executors are live-ne
 ### Capabilities
 
 - **Executor** — the atomic unit of capability: one self-contained check or action (resolve DNS, grade security headers, probe for open redirect, …). Takes a target plus options and returns structured data, optionally including findings. Addressed by a stable `uses` key and tagged with classification metadata. There are 51.
-- **Extension** — a domain module packaging one or more related executors (e.g. the `web` extension ships all the `http.*` executors), with their shared helper code and an optional report module. The unit of distribution: a local folder under `extensions/`, or an npm package. There are 13.
+- **Extension** — a domain module packaging one or more related executors (e.g. the `web` extension ships all the `http.*` executors), with their shared helper code and an optional report module. The unit of distribution: a local folder under `extensions/`, or an npm package. There are 15.
 - **Descriptor** (a.k.a. manifest) — the object an extension's `index.js` default-exports. Declares the extension's name/version/domain/description, the executors with their metadata and run functions, the permissions it needs, and an optional report module. This is what the loader reads to register everything.
 - **Domain** — the capability area an extension covers (dns, web, tls, cloud, network, nuclei, …). The organizing/folder dimension; related code stays together for cohesion.
 - **Report module** (`report.js`) — an extension-owned function `findings(stepOutput)` that turns one executor's raw result into severity-rated findings. The engine calls each extension's report module and aggregates the results, so domain knowledge stays with the domain.
