@@ -6,6 +6,7 @@ import {
   wayback, secrets, openRedirect, subdomainTakeover, robots, cookies, graphql,
   securityTxt, wellKnown, faviconHash,
 } from './src/advanced.js';
+import { screenshot } from './src/screenshot.js';
 import { findings } from './report.js';
 
 const url = { type: 'string', description: 'URL path. Default: "/"' };
@@ -14,10 +15,10 @@ const scheme = { type: 'string', description: '"http" or "https". Default: "http
 /** Web surface — HTTP scanning and read-only exposure checks. */
 export default {
   name: 'web',
-  version: '1.2.0',
+  version: '1.3.0',
   domain: 'web',
-  description: 'Web surface — headers/content, header grade, WAF/CDN, tech fingerprint, CORS, methods, cookies, robots, path fuzzing, secrets, open-redirect, subdomain-takeover, .git exposure, and Wayback URLs.',
-  permissions: { network: ['http', 'https'], env: [], bins: [] },
+  description: 'Web surface — headers/content, header grade, WAF/CDN, tech fingerprint, CORS, methods, cookies, robots, path fuzzing, secrets, open-redirect, subdomain-takeover, .git exposure, Wayback URLs, security.txt/well-known, favicon hashing, and headless screenshots.',
+  permissions: { network: ['http', 'https'], env: ['CHROME_PATH', 'PUPPETEER_EXECUTABLE_PATH'], bins: ['google-chrome', 'chromium', 'chromium-browser', 'msedge'] },
   report: { findings },
   executors: [
     {
@@ -114,6 +115,17 @@ export default {
       uses: 'http.favicon_hash', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'Shodan/Censys favicon hash (mmh3) for infrastructure correlation.',
       run: faviconHash, inputSchema: { target: { type: 'string' }, path: url, scheme },
+    },
+    {
+      uses: 'web.screenshot', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
+      summary: 'Headless-browser PNG screenshot (no-op without a Chrome/Chromium binary).',
+      run: screenshot, inputSchema: {
+        target: { type: 'string' }, path: url, scheme,
+        width: { type: 'number', description: 'Viewport width. Default: 1280' },
+        height: { type: 'number', description: 'Viewport height. Default: 800' },
+        outFile: { type: 'string', description: 'Output PNG path (optional; defaults to a temp file)' },
+        waitMs: { type: 'number', description: 'Virtual time budget ms before capture. Default: 4000' },
+      },
     },
   ],
 };
