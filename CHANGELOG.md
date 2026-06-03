@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.14.0] - 2026-06-04
+
+Phase 10 — agent-native MCP surface. Leans further into the MCP/agent angle:
+adds the MCP primitives the server was missing (Resources, Prompts), a curated
+tool mode, and an automated regression for the agent layer.
+
+### Added for 0.14.0
+
+- **MCP Resources** (`src/mcp-resources.js`) — readable state the agent can fetch
+  and cite: `cats://capabilities`, `cats://assessments`, and
+  `cats://assessment/<id>` / `…/report` for every saved assessment (+ resource
+  templates).
+- **MCP Prompts** (`src/mcp-prompts.js`) — one-click agent workflows:
+  `assess-domain`, `triage-findings`, `passive-osint`, `quick-recon`. Each tells
+  the agent exactly which `cats_assess_*` tools to call, in order.
+- **Lean tool mode** — `CATS_TOOL_MODE=lean` hides the 56 per-executor tools
+  (78 → 22) so agent tool-choice stays sharp; executors stay reachable via the new
+  generic **`cats_execute`** tool and discoverable via `cats_capabilities`.
+- **Assessment eval harness** (`scripts/eval.mjs`, `npm run eval`) — a
+  deterministic regression that drives the pivot loop against a golden target and
+  asserts the investigation progresses (entities discovered, pivots surfaced,
+  report synthesized).
+
+### Changed for 0.14.0
+
+- MCP server declares `resources` + `prompts` capabilities; boot banner reports
+  prompt count + resources, and lean mode. Full mode is now 78 tools (adds
+  `cats_execute`).
+
 ## [0.13.0] - 2026-06-03
 
 Phase 9 — agent-driven assessments. The keystone of the MCP/agent strategy:

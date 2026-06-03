@@ -147,6 +147,54 @@ generated from the extension catalog. Examples:
 Call **`cats_capabilities`** for the full, live list (it reflects any installed
 extensions, including npm `cyberagent-ext-*` plugins).
 
+`cats_execute` runs **any** executor generically: `{ uses, target, opts? }` — the
+single entry point used in lean mode.
+
+---
+
+## Resources
+
+The server exposes readable state as MCP resources (the agent can fetch and cite
+these without a tool call):
+
+| URI | Contents |
+| --- | -------- |
+| `cats://capabilities` | Every executor by phase / posture / domain (JSON) |
+| `cats://assessments` | Index of saved assessments |
+| `cats://assessment/{id}` | A raw assessment session (entities, findings, steps) |
+| `cats://assessment/{id}/report` | The synthesized prioritized report (Markdown) |
+
+---
+
+## Prompts
+
+One-click agent workflows (surfaced as slash-style prompts in MCP clients):
+
+| Prompt | Arguments | What it does |
+| ------ | --------- | ------------ |
+| `assess-domain` | `target`, `passive?` | Drives a full assessment loop (start → run → pivot → report) |
+| `triage-findings` | `assessmentId` | Prioritizes an assessment's findings into a remediation plan |
+| `passive-osint` | `target` | Passive-only footprint — nothing touches the host |
+| `quick-recon` | `target` | Fast essentials — DNS, TLS, headers, subdomains |
+
+---
+
+## Lean tool mode
+
+Many MCP clients pick tools better with a smaller surface. Set
+`CATS_TOOL_MODE=lean` to hide the 56 per-executor tools (78 → 22): the agent
+discovers executors via `cats_capabilities` and runs any of them via
+`cats_execute`, while the assessment verbs (`cats_assess_*`) and playbook tools
+stay front-and-center.
+
+```json
+{ "mcpServers": { "cyberagent": {
+    "command": "node",
+    "args": ["/abs/path/to/src/mcp-server.js"],
+    "env": { "CATS_TOOL_MODE": "lean" }
+} } }
+```
+
 ---
 
 ## Adding a new playbook
@@ -165,7 +213,7 @@ The new playbook automatically appears as a tool (`cats_play__<id>`) and in the 
 npm run mcp
 # stderr output:
 # Loaded 18 extensions (56 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.13.0 ready — 77 tools
+# CyberAgentToolSet (CATS) v0.14.0 ready — 78 tools, 4 prompts, resources on
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null
