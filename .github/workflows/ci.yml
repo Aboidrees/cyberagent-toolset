@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Deterministic gate — fast, no external dependencies. This is the required check.
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: Syntax check (node --check)
+        run: |
+          set -e
+          for f in $(git ls-files 'src/**/*.js' 'extensions/**/*.js' 'scripts/**/*.mjs'); do
+            node --check "$f"
+          done
+          echo "All source files parse."
+
+      - name: Validate catalog, playbooks, watchlists, schema
+        run: node scripts/ci-validate.mjs
+
+      - name: MCP server boots and lists tools
+        run: |
+          out=$(echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null)
+          echo "$out" | node -e '
+            let d=""; process.stdin.on("data",c=>d+=c).on("end",()=>{
+              const tools = JSON.parse(d).result.tools;
+              if (!tools || tools.length < 40) { console.error("Expected >= 40 tools, got", tools && tools.length); process.exit(1); }
+              console.log(tools.length, "MCP tools registered");
+            });'
+
+  # Live-network smoke: confirm the engine runs every executor end-to-end without
+  # crashing. Individual executor results may vary (rate limits, no keys, no root),
+  # so it asserts the run completed with one output per step — not that all pass.
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: Install scanners
+        run: sudo apt-get update && sudo apt-get install -y nmap traceroute
+
+      - name: Run all-tools self-test against example.com
+        run: node src/index.js -p playbooks/all-tools-selftest.yaml --target example.com --out runs
+
+      - name: Assert the engine executed every step
+        run: |
+          node -e '
+            const fs = require("fs"), yaml = require("js-yaml");
+            const steps = (yaml.load(fs.readFileSync("playbooks/all-tools-selftest.yaml","utf8")).steps || []).length;
+            const file = "runs/" + fs.readdirSync("runs").filter(x => x.includes("Tools") && x.endsWith(".json")).sort().pop();
+            const report = JSON.parse(fs.readFileSync(file, "utf8"));
+            const got = report.outputs.length;
+            const ran = report.outputs.filter(o => o.ok).length;
+            console.log(`self-test: ${got}/${steps} steps executed, ${ran} ok`);
+            if (got !== steps) { console.error("engine did not execute every step"); process.exit(1); }
+          '
