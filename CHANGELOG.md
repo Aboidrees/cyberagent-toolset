@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.15.0] - 2026-06-04
+
+Phase 11 — target diagnostics. An assessment now explains an empty result instead
+of leaving it silent: a nonexistent / non-resolving target is reported as an
+explicit reason, not a blank report.
+
+### Added for 0.15.0
+
+- **`preflightTarget()`** (`src/assessment.js`) — resolves the target on
+  `assess start` / `cats_assess_start` and records a `reachability` signal
+  (`resolves`, `addresses`, `reason` — e.g. `ENOTFOUND`, `no-address-records`).
+- **Report diagnostics** — the synthesized report now carries `reachability` +
+  a `diagnostics[]` list and renders a **Diagnostics** section: e.g. *"Target
+  does not resolve (ENOTFOUND) — likely a typo or a nonexistent domain."*, or
+  *"No public footprint discovered after N steps."* when a live target is bare.
+- **CLI / MCP surfacing** — `assess start` prints a warning for a dead target;
+  `cats_assess_start` returns `reachability` + a `warning` field.
+- **Eval** (`npm run eval`) now **SKIPs** (exit 0) an unresolvable target with an
+  explicit reason, so a dead target is distinguishable from a broken engine.
+
 ## [0.14.0] - 2026-06-04
 
 Phase 10 — agent-native MCP surface. Leans further into the MCP/agent angle:

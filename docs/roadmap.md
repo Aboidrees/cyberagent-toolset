@@ -4,13 +4,14 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.14.0
+## Current state — v0.15.0
 
 | Area | Status |
 | ------ | -------- |
 | **56 executors across 18 extensions** (recon · scanning · gaining-access) | ✅ Done |
 | **Phase 9 — agent-driven assessments**: stateful sessions + entity graph + pivot engine + correlated report synthesis (`cats_assess_*` + `assess` CLI) | ✅ Done |
 | **Phase 10 — agent-native MCP surface**: MCP Resources + Prompts, lean tool mode + `cats_execute`, assessment eval harness | ✅ Done |
+| **Phase 11 — target diagnostics**: assessment preflight (`reachability`) + report diagnostics — explicit reason for an empty/dead target; eval skips unresolvable targets | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |

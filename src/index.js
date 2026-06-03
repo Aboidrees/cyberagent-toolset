@@ -12,7 +12,7 @@ import { loadCatalog } from './extensions/loader.js';
 import { assemble } from './auto.js';
 import { ensureDir } from './utils/fsx.js';
 import {
-  createAssessment, runStep, saveAssessment, loadAssessment, listAssessments,
+  createAssessment, runStep, saveAssessment, loadAssessment, listAssessments, preflightTarget,
 } from './assessment.js';
 import { suggest } from './pivots.js';
 import { synthesize } from './assessment-report.js';
@@ -297,9 +297,14 @@ await yargs(hideBin(process.argv))
       if (argv.action === 'start') {
         if (!argv.idOrTarget) throw new Error('assess start needs a target: cyberagent assess start example.com');
         const session = createAssessment({ target: argv.idOrTarget, posture });
+        const reach = await preflightTarget(session);
         await saveAssessment(session);
-        const next = suggest(session, catalog, { posture, limit: argv.top });
         console.log(`✅ Assessment ${session.id} started for ${session.target} (${session.targetType})`);
+        if (!reach.resolves) {
+          console.log(`\n⚠ Target does not resolve (${reach.reason}) — likely a typo or nonexistent. ` +
+            `Passive sources will find little; double-check the hostname.`);
+        }
+        const next = suggest(session, catalog, { posture, limit: argv.top });
         printSuggestions(next);
         console.log(`\nRun the top ${argv.top}:  cyberagent assess run ${session.id} --top ${argv.top}${argv.passive ? ' --passive' : ''}`);
         return;

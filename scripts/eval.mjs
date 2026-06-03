@@ -16,7 +16,7 @@
  */
 
 import { loadCatalog } from '../src/extensions/loader.js';
-import { createAssessment, runStep } from '../src/assessment.js';
+import { createAssessment, runStep, preflightTarget } from '../src/assessment.js';
 import { suggest } from '../src/pivots.js';
 import { synthesize } from '../src/assessment-report.js';
 
@@ -34,6 +34,15 @@ console.log(`\nAssessment eval — target: ${TARGET} (passive)\n`);
 
 const catalog = await loadCatalog();
 const session = createAssessment({ target: TARGET, posture: 'passive' });
+
+// 0. Preflight — a nonexistent/non-resolving target has nothing to discover, so
+//    skip (not fail): a dead target must be distinguishable from a broken engine.
+const reach = await preflightTarget(session);
+if (!reach.resolves) {
+  console.log(`⚠ SKIP — "${TARGET}" does not resolve (${reach.reason}). It may be a typo or nonexistent; there is nothing to assess.\n`);
+  process.exit(0);
+}
+console.log(`(target resolves: ${reach.addresses.slice(0, 3).join(', ')})\n`);
 
 // 1. Start yields a non-empty, ranked plan.
 let next = suggest(session, catalog, { posture: 'passive', limit: TOP });

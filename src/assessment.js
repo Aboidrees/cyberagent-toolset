@@ -10,6 +10,7 @@
  */
 
 import path from 'path';
+import dns from 'dns/promises';
 import { randomUUID } from 'crypto';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -48,6 +49,39 @@ export function createAssessment({ target, posture } = {}) {
     value: host, attrs: { seed: true }, source: 'seed', firstSeen: nowISO(), scanned: false,
   });
   return session;
+}
+
+/**
+ * Preflight the target: does it actually resolve? An assessment of a nonexistent
+ * or non-resolving host discovers nothing — and that emptiness should be reported
+ * as an explicit reason ("ENOTFOUND — likely a typo"), not as a silent blank. The
+ * result is stored on the session and surfaced in diagnostics.
+ */
+export async function preflightTarget(session) {
+  if (session.targetType === 'ip' || session.targetType === 'cidr') {
+    session.reachability = { resolves: true, addresses: [session.target], reason: 'ip-literal' };
+    return session.reachability;
+  }
+  const host = session.target;
+  let addresses = [];
+  try {
+    addresses = await dns.resolve4(host);
+  } catch (e4) {
+    try {
+      addresses = await dns.resolve6(host);
+    } catch (e6) {
+      const code = e4.code || e6.code || 'RESOLVE_FAILED';
+      const reason = code === 'ENOTFOUND' ? 'ENOTFOUND'
+        : code === 'ENODATA' ? 'no-address-records'
+          : code;
+      session.reachability = { resolves: false, addresses: [], reason };
+      session.updatedAt = nowISO();
+      return session.reachability;
+    }
+  }
+  session.reachability = { resolves: true, addresses, reason: 'resolved' };
+  session.updatedAt = nowISO();
+  return session.reachability;
 }
 
 const findingKey = (f) => `${f.severity}|${f.uses}|${f.message}`;
