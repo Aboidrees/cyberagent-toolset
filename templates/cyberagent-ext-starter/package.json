@@ -1,0 +1,24 @@
+{
+  "name": "cyberagent-ext-starter",
+  "version": "0.1.0",
+  "description": "Starter template for a CyberAgentToolSet (CATS) extension. Rename to cyberagent-ext-<yourtool> and publish to npm — CATS auto-discovers it.",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "cyberagent",
+    "cyberagent-ext",
+    "cats",
+    "security",
+    "reconnaissance",
+    "mcp"
+  ],
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "src",
+    "README.md"
+  ]
+}
