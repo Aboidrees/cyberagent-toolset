@@ -700,6 +700,7 @@ The following executors were added across the Phase 4–7 expansions. Keyless un
 | `web.security_txt` | recon · active | `scheme`, `timeoutMs` | `{ found, contact[], policy[], expires, fields, findings }` — parses security.txt (RFC 9116); flags an expired policy |
 | `web.well_known` | recon · active | `scheme`, `timeoutMs` | `{ probed, presentCount, endpoints[], findings }` — enumerates well-known URIs (OAuth/OpenID discovery, MTA-STS, change-password, app-association) |
 | `http.favicon_hash` | recon · active | `path`, `scheme`, `timeoutMs` | `{ found, bytes, hash, shodanQuery }` — Shodan/Censys favicon hash (mmh3) for pivoting to related infrastructure |
+| `web.screenshot` | scanning · active | `scheme`, `path`, `width`, `height`, `outFile`, `waitMs` | `{ captured, browser, file, bytes, dimensions }` — headless-browser PNG capture. No-op note without a Chrome/Chromium binary (set `CHROME_PATH` to override) |
 | `web.wayback` | recon · passive | `limit` | Archived URLs from the Wayback Machine (queries archive.org, not the target) |
 
 ### Registration & certificates
@@ -720,6 +721,24 @@ The following executors were added across the Phase 4–7 expansions. Keyless un
 | `uses` | Phase · Posture | Options | Returns |
 | ------ | --------------- | ------- | ------- |
 | `ssh.audit` | scanning · active | `port`, `timeoutMs` | `{ banner, kexAlgorithms[], hostKeyAlgorithms[], ciphers[], macs[], weak{}, findings }` — parses the SSH banner + KEXINIT and flags weak/deprecated cipher/KEX/MAC/host-key algorithms (no auth) |
+
+### SMB
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `smb.probe` | scanning · active | `port`, `timeoutMs` | `{ dialect, signingEnabled, signingRequired, findings }` — SMB2 NEGOTIATE over TCP/445; flags signing-not-required (NTLM-relay exposure). No authentication |
+
+### SNMP
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `snmp.probe` | scanning · active | `port`, `communities[]`, `timeoutMs` | `{ communitiesTried, open[], sysDescr, exposed, findings }` — read-only SNMPv2c GET (sysDescr) per candidate community; flags agents answering a default/guessable community |
+
+### Cloud
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `cloud.bucket_objects` | gaining-access · active | `url` \| `bucket`+`provider`, `container`, `limit`, `timeoutMs` | `{ listable, objectCount, truncated, objects[], sensitive[], findings }` — lists a public-listable bucket (S3/GCS/Azure) and flags sensitive keys (backups, dumps, secrets) |
 
 ### Network
 
@@ -745,6 +764,7 @@ The following executors were added across the Phase 4–7 expansions. Keyless un
 
 | `uses` | Key | Returns |
 | ------ | --- | ------- |
+| `hunter.emails` | `HUNTER_API_KEY` | Hunter.io domain email harvest — addresses, pattern, organization |
 | `securitytrails.subdomains` | `SECURITYTRAILS_API_KEY` | Historical subdomains |
 | `securitytrails.dns_history` | `SECURITYTRAILS_API_KEY` | Historical A-record timeline |
 | `censys.host` | `CENSYS_API_ID` + `CENSYS_API_SECRET` | Host services/software/ASN/location |

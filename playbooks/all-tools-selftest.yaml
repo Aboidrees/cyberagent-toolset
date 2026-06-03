@@ -63,6 +63,10 @@ steps:
     uses: smtp.probe
     with:
       timeoutMs: 12000
+  - name: Hunter.io email harvest (key-gated)
+    uses: hunter.emails
+    with:
+      timeoutMs: 15000
   - name: ASN / IP intelligence
     uses: ip.intel
   - name: Security header score (A–F)
@@ -110,6 +114,10 @@ steps:
     uses: cloud.bucket_finder
     with:
       timeoutMs: 30000
+  - name: Cloud bucket object listing
+    uses: cloud.bucket_objects
+    with:
+      timeoutMs: 15000
   - name: Path discovery (fuzz)
     uses: http.fuzz_paths
     with:
@@ -153,6 +161,11 @@ steps:
     with:
       scheme: "{{vars.scheme}}"
       timeoutMs: 10000
+  - name: Headless screenshot
+    uses: web.screenshot
+    with:
+      scheme: "{{vars.scheme}}"
+      timeoutMs: 45000
   - name: DNSSEC posture
     uses: dns.dnssec
     with:
@@ -214,6 +227,14 @@ steps:
     uses: ssh.audit
     with:
       timeoutMs: 12000
+  - name: SMB negotiation probe
+    uses: smb.probe
+    with:
+      timeoutMs: 8000
+  - name: SNMP community probe
+    uses: snmp.probe
+    with:
+      timeoutMs: 4000
   - name: nmap UDP (top 20)
     uses: nmap.udp
     with:

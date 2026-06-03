@@ -79,8 +79,8 @@ node src/index.js --help
 # Check the MCP server starts
 npm run mcp
 # Expected output:
-# Loaded 15 extensions (51 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.11.0 ready — 68 tools
+# Loaded 18 extensions (56 executors), 13 playbooks
+# CyberAgentToolSet (CATS) v0.12.0 ready — 73 tools
 ```
 
 Press `Ctrl+C` to stop the MCP server.

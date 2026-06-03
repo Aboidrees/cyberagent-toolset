@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import './env.js';
 import fs from 'fs/promises';
 import yargs from 'yargs';
@@ -222,6 +223,32 @@ await yargs(hideBin(process.argv))
           }
         }
         console.log('');
+      }
+    })
+  )
+
+  // ── permissions ─────────────────────────────────────────────────────────────
+  .command(
+    ['permissions', 'perms'],
+    'Show each extension\'s declared permissions (network / env / bins)',
+    y => y.option('json', { type: 'boolean', default: false, describe: 'Output permissions as JSON' }),
+    wrap(async argv => {
+      const catalog = await loadCatalog();
+      const rows = catalog.descriptors.map(d => ({
+        extension: d.name,
+        version: d.version,
+        network: d.permissions?.network || [],
+        env: d.permissions?.env || [],
+        bins: d.permissions?.bins || [],
+      })).sort((a, b) => a.extension.localeCompare(b.extension));
+
+      if (argv.json) { console.log(JSON.stringify(rows, null, 2)); return; }
+
+      console.log(`Declared permissions — ${rows.length} extensions`);
+      console.log('(strict enforcement: set CATS_STRICT_PERMISSIONS=1 — undeclared env/bin access then throws)\n');
+      for (const r of rows) {
+        const fmt = (a) => a.length ? a.join(', ') : '—';
+        console.log(`${r.extension.padEnd(16)} net: ${fmt(r.network).padEnd(22)} env: ${fmt(r.env).padEnd(34)} bins: ${fmt(r.bins)}`);
       }
     })
   )

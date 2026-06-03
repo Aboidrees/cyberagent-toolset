@@ -19,6 +19,7 @@ cp .env.example .env
 | `SECURITYTRAILS_API_KEY` | `securitytrails.*` (passive DNS history) | **Free tier** | securitytrails.com |
 | `CENSYS_API_ID` + `CENSYS_API_SECRET` | `censys.host` | **Free tier** | search.censys.io |
 | `GITHUB_TOKEN` | `github.leaks` (code search) | **Free** | github.com/settings/tokens |
+| `HUNTER_API_KEY` | `hunter.emails` (domain email harvest) | **Free tier** | hunter.io/api-keys |
 | `SLACK_WEBHOOK_URL` | Slack run notifications | **Free** | api.slack.com/messaging/webhooks |
 | `WEBHOOK_URL` | generic JSON webhook | **Free** (self-hosted) | your endpoint |
 | `NOTIFY_ON_SEVERITY` | severity gate for notifications (`high,critical` default, or `all`) | — | — |

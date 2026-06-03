@@ -20,7 +20,7 @@ Every executor is classified on four axes (declared as metadata, not folder path
 | ---- | ------ |
 | **phase** | `reconnaissance` · `scanning` · `gaining-access` *(`maintaining-access`, `covering-tracks` reserved, unused)* |
 | **posture** | `passive` (no packets to target) · `active` (direct contact) |
-| **domain** | `dns` · `whois` · `rdap` · `email` · `ip-intel` · `threat-intel` · `securitytrails` · `censys` · `github-leaks` · `network` · `web` · `tls` · `ssh` · `cloud` · `nuclei` |
+| **domain** | `dns` · `whois` · `rdap` · `email` · `ip-intel` · `threat-intel` · `securitytrails` · `censys` · `github-leaks` · `hunter` · `network` · `web` · `tls` · `ssh` · `smb` · `snmp` · `cloud` · `nuclei` |
 | **targetTypes** | `domain` · `ip` · `cidr` · `url` · `email` (which inputs the executor accepts) |
 
 The `uses:` key (e.g. `dns.resolve`) is a **stable logical id** and the API
@@ -73,8 +73,11 @@ export default {
 - **`run(target, opts, ctx)`** — `ctx` injects shared services (`validateTarget`,
   …). Local extensions may import `#sdk` directly and ignore `ctx`; npm plugins use
   `ctx` so they need no access to core internals.
-- **`permissions`** — declared up front; the core can enforce a passive-only mode
-  and surfaces what an extension touches (network egress, env keys, external bins).
+- **`permissions`** — declared up front (network egress, env keys, external bins).
+  Surfaced via `cyberagent permissions`, and **enforced at runtime**: the scoped
+  `ctx.env(key)` / `ctx.requireBin(name)` warn on undeclared access, or throw under
+  `CATS_STRICT_PERMISSIONS=1` — so third-party plugins can't quietly reach for
+  credentials or shell out to undeclared tools.
 - **`report.findings`** — owns severity extraction for this domain. Moves the old
   monolithic per-executor logic out of `utils/findings.js` (which becomes a thin
   aggregator).
