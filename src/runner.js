@@ -52,25 +52,28 @@ function withTimeout(promise, ms, label = 'operation') {
   });
 }
 
-export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, stepTimeoutMs }) {
-  // Load playbook. `.yaml`/`.yml` are pure YAML; `.md` is YAML front matter +
-  // Markdown body (legacy). The body, when present, is exposed to templates.
-  const raw = await fs.readFile(playbookPath, 'utf8');
+export async function runPlaybook({ playbookPath, playbook, outDir, varOverrides = {}, stepTimeoutMs, posture }) {
+  // Source the playbook from an in-memory object (e.g. the `auto` command) or
+  // load it. `.yaml`/`.yml` are pure YAML; `.md` is YAML front matter + Markdown
+  // body (legacy). The body, when present, is exposed to templates.
   let fm, content = '';
-  if (playbookPath.endsWith('.yaml') || playbookPath.endsWith('.yml')) {
-    fm = yaml.load(raw) || {};
+  if (playbook) {
+    fm = playbook;
+  } else if (playbookPath.endsWith('.yaml') || playbookPath.endsWith('.yml')) {
+    fm = yaml.load(await fs.readFile(playbookPath, 'utf8')) || {};
   } else {
-    const parsed = matter(raw, { engines: { yaml: s => yaml.load(s) } });
+    const parsed = matter(await fs.readFile(playbookPath, 'utf8'), { engines: { yaml: s => yaml.load(s) } });
     fm = parsed.data;
     content = parsed.content;
   }
 
   const catalog = await loadCatalog();
+  const metaByUses = new Map(catalog.executors.map(e => [e.uses, e]));
   const ctx = { vars: { ...(fm.vars || {}), ...varOverrides } };
   const steps = fm.steps || [];
   const outputs = new Array(steps.length);
   const startedAt = new Date().toISOString();
-  const title = fm.title || fm.id || path.basename(playbookPath);
+  const title = fm.title || fm.id || (playbookPath ? path.basename(playbookPath) : 'run');
 
   // Execute one step and return its output object (caller controls ordering).
   const runStep = async (step, i) => {
@@ -80,6 +83,14 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
     const fn = catalog.registry[stepCtx.uses];
     if (!fn) {
       return { name: stepCtx.name, uses: stepCtx.uses, error: `Unknown executor` };
+    }
+    // Passive-only / safe mode: skip any active executor (no packets to the host).
+    if (posture === 'passive') {
+      const meta = metaByUses.get(stepCtx.uses);
+      if (meta && meta.posture !== 'passive') {
+        logStep(i + 1, `${stepCtx.name} (skipped — active)`, stepCtx.uses);
+        return { name: stepCtx.name, uses: stepCtx.uses, skipped: true, reason: 'passive-only mode: executor is active' };
+      }
     }
     logStep(i + 1, stepCtx.name, stepCtx.uses);
     try {
@@ -150,7 +161,9 @@ export async function runPlaybook({ playbookPath, outDir, varOverrides = {}, ste
   mdParts.push('## Steps & Results');
   for (const o of outputs) {
     mdParts.push(`### ${o.name} \`(${o.uses})\``);
-    if (o.ok) {
+    if (o.skipped) {
+      mdParts.push(`⏭️ **Skipped**: ${o.reason}`);
+    } else if (o.ok) {
       mdParts.push(`<details><summary>Success</summary>\n\n\`\`\`json\n${JSON.stringify(o.data, null, 2)}\n\`\`\`\n</details>`);
     } else {
       mdParts.push(`❌ **Failed**: ${o.error}`);

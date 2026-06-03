@@ -82,6 +82,7 @@ function buildOrchestrationTools(playbooks) {
           playbook:      { type: 'string', description: 'Playbook id' },
           vars:          { type: 'object', description: 'Extra variables (optional)' },
           stepTimeoutMs: { type: 'number', description: 'Per-step timeout override (optional)' },
+          passive:       { type: "boolean", description: "Passive-only: skip active executors (optional)" },
         },
         required: ['target', 'playbook'],
       },
@@ -96,6 +97,7 @@ function buildOrchestrationTools(playbooks) {
           playbooks:     { type: 'array', items: { type: 'string' }, description: 'Playbook ids' },
           vars:          { type: 'object', description: 'Variables injected into every playbook (optional)' },
           stepTimeoutMs: { type: 'number', description: 'Per-step timeout override (optional)' },
+          passive:       { type: "boolean", description: "Passive-only: skip active executors (optional)" },
         },
         required: ['target', 'playbooks'],
       },
@@ -110,8 +112,9 @@ function buildPlaybookTools(playbooks) {
     inputSchema: {
       type: 'object',
       properties: {
-        target: { type: 'string', description: 'Target hostname or IP address' },
-        vars:   { type: 'object', description: 'Override playbook variables (optional)' },
+        target:  { type: 'string', description: 'Target hostname or IP address' },
+        vars:    { type: 'object', description: 'Override playbook variables (optional)' },
+        passive: { type: 'boolean', description: 'Passive-only: skip active executors (optional)' },
       },
       required: ['target'],
     },
@@ -169,7 +172,7 @@ async function main() {
         await ensureDir(RUNS_DIR);
         result = await runPlaybook({
           playbookPath: pb.file, outDir: RUNS_DIR,
-          varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs,
+          varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs, posture: args.passive ? "passive" : undefined,
         });
 
       } else if (name === `${PREFIX}_run_multi`) {
@@ -181,7 +184,7 @@ async function main() {
           try {
             const r = await runPlaybook({
               playbookPath: pb.file, outDir: RUNS_DIR,
-              varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs,
+              varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs, posture: args.passive ? "passive" : undefined,
             });
             results.push({ playbook: id, title: pb.title, ok: true, jsonPath: r.jsonPath, mdPath: r.mdPath, report: r.report });
           } catch (e) {
@@ -197,7 +200,7 @@ async function main() {
         await ensureDir(RUNS_DIR);
         result = await runPlaybook({
           playbookPath: pb.file, outDir: RUNS_DIR,
-          varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs,
+          varOverrides: { target: args.target, ...(args.vars || {}) }, stepTimeoutMs: args.stepTimeoutMs, posture: args.passive ? "passive" : undefined,
         });
 
       } else if (toolToUses.has(name)) {

@@ -54,6 +54,7 @@ await yargs(hideBin(process.argv))
       .option('var', { type: 'array', describe: 'Override playbook vars, e.g. --var scheme=http' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
+      .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors (no packets to the host)' })
       .example('$0 -p playbooks/quick-web-recon.yaml --target fortmind.qa', 'Run a playbook'),
     wrap(async argv => {
       await ensureDir(argv.out);
@@ -62,6 +63,7 @@ await yargs(hideBin(process.argv))
         outDir: argv.out,
         varOverrides: collectVars(argv),
         stepTimeoutMs: argv.timeout,
+        posture: argv.passive ? 'passive' : undefined,
       });
       process.stderr.write('\n✅ Done.\n');
       console.log(`JSON:     ${r.jsonPath}`);
