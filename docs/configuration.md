@@ -96,6 +96,10 @@ SHODAN_API_KEY=your_key_here             # shodan.host (no-op without it)
 NVD_API_KEY=your_key_here                # vuln.cve_lookup rate-limit boost (optional)
 HUNTER_API_KEY=your_key_here             # hunter.emails (no-op without it)
 CHROME_PATH=                             # web.screenshot — override Chrome/Chromium path
+
+# ── Runtime behaviour ──
+CATS_TOOL_MODE=full                      # "lean" hides per-executor MCP tools (78 → 22)
+CATS_STRICT_PERMISSIONS=0                # "1" makes undeclared env/bin access throw
 ```
 
 All built-in executors work without keys; the keys above only enable extra

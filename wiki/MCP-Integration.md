@@ -29,11 +29,26 @@ Restart Claude Desktop fully.
 | `cats_assess_run` | Run top-N suggestions (or a specific `uses`); folds results in |
 | `cats_assess_next` | List ranked next-best actions |
 | `cats_assess_report` | Prioritized report (CVE × EPSS, entity inventory) |
+| `cats_execute` | Run any executor generically: `{ uses, target, opts? }` |
 | `cats_<uses>` | One tool per executor (e.g. `cats_http_security_score`) |
 
 **Agent-driven loop:** `cats_assess_start → cats_assess_run` (repeat as new
 entities surface) `→ cats_assess_report` — the preferred way to run a full
 assessment conversationally.
+
+## Resources & Prompts
+
+**Resources** (readable state, no tool call): `cats://capabilities`,
+`cats://assessments`, `cats://assessment/{id}`, `cats://assessment/{id}/report`.
+
+**Prompts** (one-click workflows): `assess-domain`, `triage-findings`,
+`passive-osint`, `quick-recon`.
+
+## Lean tool mode
+
+Set `CATS_TOOL_MODE=lean` (in the server's `env`) to hide the 56 per-executor
+tools (78 → 22) for sharper agent tool-choice — executors stay reachable via
+`cats_execute` and discoverable via `cats_capabilities`.
 
 ## Verify manually
 
