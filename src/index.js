@@ -11,6 +11,11 @@ import { generateReportFromFile } from './report.js';
 import { loadCatalog } from './extensions/loader.js';
 import { assemble } from './auto.js';
 import { ensureDir } from './utils/fsx.js';
+import {
+  createAssessment, runStep, saveAssessment, loadAssessment, listAssessments,
+} from './assessment.js';
+import { suggest } from './pivots.js';
+import { synthesize } from './assessment-report.js';
 
 /**
  * CLI entry point. Multi-command:
@@ -32,6 +37,16 @@ function collectVars(argv) {
   });
   if (argv.target) vars.target = argv.target;
   return vars;
+}
+
+// Render a ranked list of pivot suggestions for the CLI.
+function printSuggestions(next) {
+  if (!next.length) { console.log('  (no suggestions — assessment looks complete)'); return; }
+  console.log(`\nNext best actions (${next.length}):`);
+  for (const s of next) {
+    const o = s.opts && Object.keys(s.opts).length ? ` ${JSON.stringify(s.opts)}` : '';
+    console.log(`  [${String(s.priority).padStart(2)}] ${s.uses} → ${s.target}${o}  — ${s.reason}`);
+  }
 }
 
 // Wrap an async command handler so any thrown error is reported cleanly and the
@@ -249,6 +264,83 @@ await yargs(hideBin(process.argv))
       for (const r of rows) {
         const fmt = (a) => a.length ? a.join(', ') : '—';
         console.log(`${r.extension.padEnd(16)} net: ${fmt(r.network).padEnd(22)} env: ${fmt(r.env).padEnd(34)} bins: ${fmt(r.bins)}`);
+      }
+    })
+  )
+
+  // ── assess (stateful, agent-style assessment) ───────────────────────────────
+  .command(
+    'assess <action> [idOrTarget]',
+    'Stateful recon assessment: start · next · run · report · list',
+    y => y
+      .positional('action', { choices: ['start', 'next', 'run', 'report', 'list'], describe: 'Assessment action' })
+      .positional('idOrTarget', { type: 'string', describe: 'Target (start) or assessment id (next/run/report)' })
+      .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: restrict to passive executors' })
+      .option('top', { type: 'number', default: 5, describe: 'How many top suggestions to run/show' })
+      .option('uses', { type: 'string', describe: 'Run a specific executor (with --on)' })
+      .option('on', { type: 'string', describe: 'Target for --uses (defaults to the assessment target)' })
+      .option('json', { type: 'boolean', default: false, describe: 'JSON output (report/next)' })
+      .option('out', { type: 'string', describe: 'Write the report to a file (report)' }),
+    wrap(async argv => {
+      const posture = argv.passive ? 'passive' : undefined;
+
+      if (argv.action === 'list') {
+        const rows = await listAssessments();
+        if (argv.json) { console.log(JSON.stringify(rows, null, 2)); return; }
+        if (!rows.length) { console.log('No assessments yet. Start one: cyberagent assess start <target>'); return; }
+        for (const r of rows) console.log(`${r.id}  ${String(r.target).padEnd(28)} ${r.status.padEnd(7)} ${r.steps} steps · ${r.findings} findings · ${r.updatedAt}`);
+        return;
+      }
+
+      const catalog = await loadCatalog();
+
+      if (argv.action === 'start') {
+        if (!argv.idOrTarget) throw new Error('assess start needs a target: cyberagent assess start example.com');
+        const session = createAssessment({ target: argv.idOrTarget, posture });
+        await saveAssessment(session);
+        const next = suggest(session, catalog, { posture, limit: argv.top });
+        console.log(`✅ Assessment ${session.id} started for ${session.target} (${session.targetType})`);
+        printSuggestions(next);
+        console.log(`\nRun the top ${argv.top}:  cyberagent assess run ${session.id} --top ${argv.top}${argv.passive ? ' --passive' : ''}`);
+        return;
+      }
+
+      const session = await loadAssessment(argv.idOrTarget);
+      if (!session) throw new Error(`Assessment "${argv.idOrTarget}" not found (try: cyberagent assess list)`);
+
+      if (argv.action === 'next') {
+        const next = suggest(session, catalog, { posture, limit: argv.top });
+        if (argv.json) { console.log(JSON.stringify(next, null, 2)); return; }
+        printSuggestions(next);
+        return;
+      }
+
+      if (argv.action === 'run') {
+        let toRun;
+        if (argv.uses) {
+          toRun = [{ uses: argv.uses, target: argv.on || session.target, opts: {} }];
+        } else {
+          toRun = suggest(session, catalog, { posture, limit: argv.top });
+        }
+        if (!toRun.length) { console.log('Nothing to run — no suggestions left. View the report: cyberagent assess report ' + session.id); return; }
+        for (const s of toRun) {
+          process.stdout.write(`▶ ${s.uses} on ${s.target} … `);
+          const r = await runStep(session, s, catalog);
+          console.log(r.ok ? `ok (+${r.newFindings.length} findings, +${r.newEntities.length} entities)` : `error: ${r.error}`);
+        }
+        await saveAssessment(session);
+        const next = suggest(session, catalog, { posture, limit: argv.top });
+        console.log('');
+        printSuggestions(next);
+        console.log(`\nReport: cyberagent assess report ${session.id}`);
+        return;
+      }
+
+      if (argv.action === 'report') {
+        const { json, markdown } = synthesize(session);
+        if (argv.out) { await fs.writeFile(argv.out, markdown); console.log(`Report written to ${argv.out}`); return; }
+        console.log(argv.json ? JSON.stringify(json, null, 2) : markdown);
+        return;
       }
     })
   )
