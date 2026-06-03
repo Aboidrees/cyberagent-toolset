@@ -49,8 +49,19 @@ async function listRunFiles() {
 export async function startDashboard({ port = 7878, host = '127.0.0.1' } = {}) {
   const catalog = await loadCatalog();
 
+  // DNS-rebinding + CSRF guard. Binding to loopback is not enough: a malicious
+  // page can rebind a hostname to 127.0.0.1 or POST cross-site to drive scans.
+  // Browsers cannot forge Host/Origin, so we accept only requests that name this
+  // exact loopback server.
+  const allowedHosts = new Set([`${host}:${port}`, `127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
+  const allowedOrigins = new Set([...allowedHosts].map(h => `http://${h}`));
+
   const server = http.createServer(async (req, res) => {
     try {
+      if (!allowedHosts.has(req.headers.host || '')) { res.writeHead(403); return res.end('forbidden host'); }
+      const origin = req.headers.origin;
+      if (origin && !allowedOrigins.has(origin)) { res.writeHead(403); return res.end('forbidden origin'); }
+
       const u = new URL(req.url, `http://${host}:${port}`);
       const p = u.pathname;
 

@@ -22,6 +22,9 @@ built on Node's `http`).
   same assessment engine as the CLI and MCP server.
 - **Localhost-bound by design** (`127.0.0.1`) — it can trigger active scans, so
   it is an operator tool, not a service to expose. `--port` / `--host` to override.
+- **DNS-rebinding + CSRF guard** — every request is validated against the bound
+  loopback `Host`, and any cross-site `Origin` is rejected (403). Loopback binding
+  alone is insufficient because the POST endpoints drive scans.
 
 ## [0.16.0] - 2026-06-04
 
