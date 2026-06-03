@@ -2,7 +2,7 @@ import {
   getHeaders, getPath, securityScore, wafDetect, fingerprint,
   corsCheck, methods, fuzzPaths, gitLeak,
 } from './src/http.js';
-import { wayback, secrets, openRedirect, subdomainTakeover, robots, cookies } from './src/advanced.js';
+import { wayback, secrets, openRedirect, subdomainTakeover, robots, cookies, graphql } from './src/advanced.js';
 import { findings } from './report.js';
 
 const url = { type: 'string', description: 'URL path. Default: "/"' };
@@ -91,6 +91,11 @@ export default {
       uses: 'web.wayback', phase: 'reconnaissance', posture: 'passive', targetTypes: ['domain'],
       summary: 'Archived URLs from the Wayback Machine (web.archive.org). Passive.',
       run: wayback, inputSchema: { target: { type: 'string' }, limit: { type: 'number', description: 'Max URLs. Default: 200' } },
+    },
+    {
+      uses: 'http.graphql', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
+      summary: 'Detect a GraphQL endpoint and whether introspection is exposed.',
+      run: graphql, inputSchema: { target: { type: 'string' }, path: url, scheme },
     },
   ],
 };
