@@ -1,6 +1,6 @@
 # Executors
 
-43 executors across 13 domain extensions, addressed by a stable `uses:` key. Run
+51 executors across 15 domain extensions, addressed by a stable `uses:` key. Run
 `cats_capabilities` (MCP) for the live list. Full options + return shapes are in
 the repo's `docs/executors.md`.
 
@@ -15,6 +15,8 @@ the repo's `docs/executors.md`.
 | `dns.txt_fingerprint` | dns | SaaS/vendor footprint from TXT verification tokens (via DoH) |
 | `subdomains.passive` | dns | Passive subdomains via crt.sh |
 | `whois.lookup` | whois | WHOIS registration data |
+| `rdap.lookup` | rdap | Structured WHOIS over RDAP/HTTPS (domains + IPs) |
+| `cert.ctlog` | tls | Certificate Transparency history via crt.sh (issuers, timeline, names) |
 | `email.security` | email | SPF · DMARC · DKIM · MTA-STS · BIMI |
 | `ip.intel` | ip-intel | ASN / BGP / country / hosting (key-gated abuse score) |
 | `shodan.host` | threat-intel | Shodan host data (needs `SHODAN_API_KEY`) |
@@ -31,7 +33,13 @@ the repo's `docs/executors.md`.
 | `uses` | Domain | What it does |
 | ------ | ------ | ------------ |
 | `subdomains.bruteforce` | dns | Active subdomain brute-force (built-in wordlist) |
+| `dns.zone_transfer` | dns | AXFR zone-transfer attempt per NS (critical if allowed) |
 | `http.robots` | web | robots.txt + sitemap endpoint discovery |
+| `web.security_txt` | web | security.txt (RFC 9116) disclosure contact/policy |
+| `web.well_known` | web | Well-known URIs (OAuth/OpenID discovery, MTA-STS, policies) |
+| `http.favicon_hash` | web | Shodan/Censys favicon hash (mmh3) for infra correlation |
+| `smtp.probe` | email | SMTP EHLO — STARTTLS/AUTH + optional open-relay heuristic |
+| `ssh.audit` | ssh | SSH KEXINIT weak cipher/KEX/MAC/host-key audit |
 | `network.ping` | network | ICMP ping statistics |
 | `network.traceroute` | network | Hop-by-hop path |
 | `nmap.scan` | network | nmap TCP port/service scan |

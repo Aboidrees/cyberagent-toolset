@@ -685,6 +685,7 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `dns.caa` | recon · passive | `timeoutMs` | `{ records, issuers, findings }` — CAA issuance policy |
 | `subdomains.bruteforce` | recon · active | `wordlist[]`, `concurrency`, `lookupTimeoutMs` | `{ wordsTried, found, subdomains[] }` — active subdomain brute-force |
 | `dns.txt_fingerprint` | recon · passive | `timeoutMs` | `{ txtRecordCount, servicesFound, services[] }` — SaaS/vendor footprint from TXT domain-verification tokens (Google, M365, Atlassian, Stripe, …) via DNS-over-HTTPS |
+| `dns.zone_transfer` | recon · active | `timeoutMs` | `{ nameservers[], vulnerable, results[], findings }` — attempts AXFR against each authoritative NS; **critical** finding if any server allows the transfer (full-zone disclosure) |
 
 ## Web
 
@@ -696,7 +697,29 @@ The following executors were added in the Phase 4 expansion. Keyless unless note
 | `http.open_redirect` | scanning · active | `path`, `scheme`, `params[]` | Open-redirect probe across common params + findings |
 | `http.subdomain_takeover` | scanning · active | `scheme` | Dangling-CNAME takeover detection (GitHub/S3/Heroku/Azure/Fastly/…) |
 | `http.graphql` | scanning · active | `path`, `scheme` | `{ pathsTried, endpoints[], introspectionExposed, findings }` — probes common GraphQL paths and flags exposed introspection |
+| `web.security_txt` | recon · active | `scheme`, `timeoutMs` | `{ found, contact[], policy[], expires, fields, findings }` — parses security.txt (RFC 9116); flags an expired policy |
+| `web.well_known` | recon · active | `scheme`, `timeoutMs` | `{ probed, presentCount, endpoints[], findings }` — enumerates well-known URIs (OAuth/OpenID discovery, MTA-STS, change-password, app-association) |
+| `http.favicon_hash` | recon · active | `path`, `scheme`, `timeoutMs` | `{ found, bytes, hash, shodanQuery }` — Shodan/Censys favicon hash (mmh3) for pivoting to related infrastructure |
 | `web.wayback` | recon · passive | `limit` | Archived URLs from the Wayback Machine (queries archive.org, not the target) |
+
+## Registration & certificates
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `rdap.lookup` | recon · passive | `timeoutMs` | `{ kind, registrar, status[], events, nameservers[], abuseContact, dnssec, findings }` — structured WHOIS over RDAP/HTTPS (RFC 9083) for a domain or IP; flags near/expired domains |
+| `cert.ctlog` | recon · passive | `limit`, `includeSubdomains`, `timeoutMs` | `{ totalCertificates, uniqueNames, issuers[], firstSeen, lastExpiry, certificates[], findings }` — Certificate Transparency history via crt.sh |
+
+## Email — SMTP
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `smtp.probe` | scanning · active | `port`, `mx`, `relayTest`, `timeoutMs` | `{ mx, banner, starttls, authMechanisms[], findings }` — SMTP EHLO probe: STARTTLS support, AUTH mechanisms, cleartext-auth flag; optional read-only open-relay heuristic (aborts before DATA) |
+
+## SSH
+
+| `uses` | Phase · Posture | Options | Returns |
+| ------ | --------------- | ------- | ------- |
+| `ssh.audit` | scanning · active | `port`, `timeoutMs` | `{ banner, kexAlgorithms[], hostKeyAlgorithms[], ciphers[], macs[], weak{}, findings }` — parses the SSH banner + KEXINIT and flags weak/deprecated cipher/KEX/MAC/host-key algorithms (no auth) |
 
 ## Network
 
