@@ -24,7 +24,7 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 | [Configuration](docs/configuration.md) | CLI flags, environment variables, output directory |
 | [MCP Integration](docs/mcp-integration.md) | MCP server setup, Claude Desktop config, interactive flow |
 | [Playbooks](docs/playbooks.md) | Available playbooks, format reference, variable templating |
-| [Executors](docs/executors.md) | All 43 executors — options, YAML syntax, return shape |
+| [Executors](docs/executors.md) | All 40 executors — options, YAML syntax, return shape |
 | [Architecture](docs/architecture.md) | Extension model, catalog, taxonomy, plugin contract |
 | [Creating Playbooks](docs/creating-playbooks.md) | Step-by-step guide to writing custom playbooks |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors, debug tips, performance tuning |

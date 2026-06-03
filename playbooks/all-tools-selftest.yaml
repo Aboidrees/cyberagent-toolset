@@ -84,11 +84,6 @@ steps:
       keyword: OpenSSH 8.2
       minCvss: 7
       maxResults: 5
-  - name: EPSS exploit-probability scoring
-    uses: vuln.epss
-    with:
-      cve: "CVE-2021-44228,CVE-2021-45046"
-      timeoutMs: 15000
   - name: Shodan host data
     uses: shodan.host
     with:
@@ -120,21 +115,12 @@ steps:
       path: /
       scheme: "{{vars.scheme}}"
       timeoutMs: 15000
-  - name: GraphQL endpoint & introspection
-    uses: http.graphql
-    with:
-      scheme: "{{vars.scheme}}"
-      timeoutMs: 15000
   - name: DNSSEC posture
     uses: dns.dnssec
     with:
       timeoutMs: 8000
   - name: CAA records
     uses: dns.caa
-    with:
-      timeoutMs: 8000
-  - name: TXT SaaS fingerprint
-    uses: dns.txt_fingerprint
     with:
       timeoutMs: 8000
   - name: Subdomain brute-force

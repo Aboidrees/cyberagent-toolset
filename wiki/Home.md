@@ -17,7 +17,7 @@ the attack lifecycle (reconnaissance · scanning · gaining-access) via installa
 
 - [[CLI Reference]] — `run` · `diff` · `watch` · `schedule` · `report`
 - [[Playbooks]] — the YAML workflows and how to write them
-- [[Executors]] — the 43 capabilities by phase / domain
+- [[Executors]] — the 40 capabilities by phase / domain
 - [[API Keys]] — Shodan, NVD, AbuseIPDB, webhooks (all optional)
 - [[Automation]] — diffing, watchlists, scheduling, report export
 - [[MCP Integration]] — drive it from Claude

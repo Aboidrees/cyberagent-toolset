@@ -1,5 +1,5 @@
 /**
- * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.10.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.9.0
  *
  * Tools are generated dynamically from two sources:
  *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
@@ -30,7 +30,7 @@ import { runPlaybook }   from './runner.js';
 import { ensureDir }     from './utils/fsx.js';
 import { loadPlaybooks } from './utils/playbooks.js';
 
-const VERSION = '0.10.0';
+const VERSION = '0.9.0';
 const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
