@@ -69,6 +69,22 @@ node src/index.js -p playbooks/vulnerability-assessment.yaml \
 
 ---
 
+## Scenario 1b — Auto (no playbook needed)
+
+Point it at a target and it runs every applicable executor (inferring domain / IP /
+CIDR / URL):
+
+```bash
+node src/index.js auto --target example.com                 # all applicable reconnaissance
+node src/index.js auto --target 192.0.2.0/24 --phase all     # everything applicable to a CIDR
+node src/index.js auto --target example.com --passive        # passive-only
+```
+
+List what is available with `cyberagent capabilities` (grouped by phase / posture /
+domain).
+
+---
+
 ## Scenario 2 — API keys (Shodan, NVD, AbuseIPDB)
 
 Everything runs keyless. Keys only add enrichment. Copy `.env.example` to `.env`
@@ -104,11 +120,16 @@ Without the binary it is a no-op note, so it never breaks a run.
 
 ## Scenario 3 — Passive-only (limited authorization)
 
-When you only have OSINT authorization, run a passive playbook (no packets reach
-the target): `email-security-assessment` and the recon steps of others are passive.
-Check any executor's posture with the MCP `cats_capabilities` tool, or see the
-stage tables in [executors.md](executors.md). Active stages are clearly marked in
-each playbook with a ⚠ notice.
+When you only have OSINT authorization, add `--passive` to any run — it skips every
+active executor (no packets reach the target host):
+
+```bash
+node src/index.js -p playbooks/web-headers-assessment.yaml --target example.com --passive
+node src/index.js auto --target example.com --passive
+```
+
+Skipped steps are marked `⏭️ Skipped` in the report. Check any executors posture
+with `cyberagent capabilities` (or the MCP `cats_capabilities` tool).
 
 ---
 
@@ -179,6 +200,8 @@ and [Architecture](architecture.md).
 | Command | Purpose |
 | ------- | ------- |
 | `cyberagent -p <playbook.yaml> --target <host>` | Run a playbook (default) |
+| `cyberagent auto --target <host>` | Auto-run every applicable executor |
+| `cyberagent capabilities` | List executors by phase / posture / domain |
 | `cyberagent diff <a.json> <b.json>` | Diff two runs |
 | `cyberagent watch --list <watchlist.yaml>` | Batch targets × playbooks |
 | `cyberagent schedule --playbook <id> --target <host> --cron "<expr>"` | Recurring scan |
