@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.16.0] - 2026-06-04
+
+Phase 12 — backlog completion. Four service probes, auth-aware scanning, MCP
+resource subscriptions, and an LLM-in-the-loop eval framework. 60 executors
+across 22 extensions / 82 MCP tools.
+
+### Added for 0.16.0
+
+- **Service probes** (new `mysql` / `postgres` / `rdp` / `ldap` extensions,
+  scanning · active, raw-socket, no auth):
+  - `mysql.probe` — MySQL/MariaDB handshake (server version banner).
+  - `postgres.probe` — PostgreSQL SSLRequest fingerprint + TLS availability.
+  - `rdp.probe` — RDP X.224 negotiation; flags Standard Security (no TLS/NLA).
+  - `ldap.probe` — LDAP anonymous simple-bind check (directory exposure).
+  - Pivots: open `3306`→`mysql.probe`, `5432`→`postgres.probe`, `3389`→`rdp.probe`,
+    `389`/`636`→`ldap.probe`.
+- **Auth-aware scanning** — every `http.*` executor accepts `bearer` / `basic` /
+  `cookie` / `headers` to reach content behind a login.
+- **MCP resource subscriptions** — `resources/subscribe` + `resources/updated`
+  notifications pushed as an assessment progresses (`resources: { subscribe: true }`).
+- **LLM-in-the-loop eval framework** (`scripts/eval-llm.mjs`, `npm run eval:llm`)
+  — a pluggable agent (heuristic baseline; optional Claude tool-use loop via
+  `ANTHROPIC_API_KEY` + `@anthropic-ai/sdk`) scored by a heuristic judge on
+  coverage / discovery / pivoting / report completeness.
+
+### Changed for 0.16.0
+
+- Self-test now exercises 60/60 executors; schema `uses`-enum regenerated;
+  web extension → 1.4.0 (auth options advertised).
+
 ## [0.15.0] - 2026-06-04
 
 Phase 11 — target diagnostics. An assessment now explains an empty result instead

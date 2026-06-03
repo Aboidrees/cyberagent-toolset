@@ -1,6 +1,6 @@
 # Executors
 
-56 executors across 18 domain extensions, addressed by a stable `uses:` key. Run
+60 executors across 22 domain extensions, addressed by a stable `uses:` key. Run
 `cats_capabilities` (MCP) for the live list. Full options + return shapes are in
 the repo's `docs/executors.md`.
 
@@ -43,6 +43,10 @@ the repo's `docs/executors.md`.
 | `ssh.audit` | ssh | SSH KEXINIT weak cipher/KEX/MAC/host-key audit |
 | `smb.probe` | smb | SMB2 NEGOTIATE — dialect + signing-required (NTLM-relay) check |
 | `snmp.probe` | snmp | SNMPv2c community-string probe (public/private/…) |
+| `mysql.probe` | mysql | MySQL/MariaDB handshake — server version banner |
+| `postgres.probe` | postgres | PostgreSQL SSLRequest — listener + TLS availability |
+| `rdp.probe` | rdp | RDP negotiation — selected security; flags missing NLA |
+| `ldap.probe` | ldap | LDAP anonymous-bind check (directory exposure) |
 | `web.screenshot` | web | Headless-browser PNG screenshot (no-op without Chrome/Chromium) |
 | `network.ping` | network | ICMP ping statistics |
 | `network.traceroute` | network | Hop-by-hop path |

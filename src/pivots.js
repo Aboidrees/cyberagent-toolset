@@ -54,10 +54,13 @@ const PORT_PROBES = {
   53: [['dns.resolve', 50, 'DNS server']],
   80: [['http.headers', 64, 'HTTP surface'], ['http.security_score', 62, 'header grade'], ['http.fingerprint', 58, 'tech']],
   161: [['snmp.probe', 86, 'SNMP community probe']],
+  389: [['ldap.probe', 84, 'LDAP anonymous-bind check']],
   443: [['tls.inspect', 64, 'certificate'], ['http.security_score', 62, 'header grade'], ['tls.deep', 58, 'deep TLS']],
   445: [['smb.probe', 88, 'SMB signing posture']],
-  3306: [['network.banner', 64, 'MySQL banner']],
-  5432: [['network.banner', 64, 'Postgres banner']],
+  636: [['ldap.probe', 84, 'LDAPS anonymous-bind check']],
+  3306: [['mysql.probe', 80, 'MySQL handshake']],
+  3389: [['rdp.probe', 86, 'RDP security / NLA check']],
+  5432: [['postgres.probe', 80, 'PostgreSQL SSLRequest']],
   6379: [['network.banner', 64, 'Redis banner']],
 };
 

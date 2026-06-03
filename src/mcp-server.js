@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.15.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.16.0
  *
  * Tools are generated dynamically from two sources:
  *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
@@ -25,6 +25,8 @@ import {
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
+  SubscribeRequestSchema,
+  UnsubscribeRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -43,7 +45,7 @@ import { synthesize }    from './assessment-report.js';
 import { listResources, listResourceTemplates, readResource } from './mcp-resources.js';
 import { PROMPTS, getPrompt } from './mcp-prompts.js';
 
-const VERSION = '0.15.0';
+const VERSION = '0.16.0';
 const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
@@ -234,7 +236,7 @@ async function main() {
 
   const server = new Server(
     { name: 'cyberagent-toolset', version: VERSION },
-    { capabilities: { tools: {}, resources: {}, prompts: {} } }
+    { capabilities: { tools: {}, resources: { subscribe: true }, prompts: {} } }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: ALL_TOOLS }));
@@ -243,6 +245,20 @@ async function main() {
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: await listResources(catalog) }));
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({ resourceTemplates: listResourceTemplates() }));
   server.setRequestHandler(ReadResourceRequestSchema, async (req) => readResource(req.params.uri, { catalog }));
+
+  // ── Resource subscriptions: push updates as an assessment progresses ────────
+  const subscriptions = new Set();
+  server.setRequestHandler(SubscribeRequestSchema, async (req) => { subscriptions.add(req.params.uri); return {}; });
+  server.setRequestHandler(UnsubscribeRequestSchema, async (req) => { subscriptions.delete(req.params.uri); return {}; });
+  const notifyUpdated = (uri) => {
+    if (subscriptions.has(uri)) server.notification({ method: 'notifications/resources/updated', params: { uri } }).catch(() => {});
+  };
+  // Notify every resource view affected by an assessment change.
+  const notifyAssessment = (id) => {
+    notifyUpdated('cats://assessments');
+    notifyUpdated(`cats://assessment/${id}`);
+    notifyUpdated(`cats://assessment/${id}/report`);
+  };
 
   // ── Prompts: one-click agent workflows ──────────────────────────────────────
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: PROMPTS }));
@@ -299,6 +315,7 @@ async function main() {
         const session = createAssessment({ target: args.target, posture });
         const reachability = await preflightTarget(session);
         await saveAssessment(session);
+        notifyAssessment(session.id);
         result = {
           assessmentId: session.id, target: session.target, targetType: session.targetType,
           reachability,
@@ -325,6 +342,7 @@ async function main() {
           ran.push({ uses: r.uses, target: r.target, ok: r.ok, error: r.error, newFindings: r.newFindings, newEntities: r.newEntities.map(e => ({ type: e.type, value: e.value })) });
         }
         await saveAssessment(session);
+        notifyAssessment(session.id);
         result = {
           assessmentId: session.id, ran,
           totals: { steps: session.steps.length, findings: session.findings.length, entities: session.entities.length },

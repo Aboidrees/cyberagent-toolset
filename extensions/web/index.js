@@ -11,11 +11,19 @@ import { findings } from './report.js';
 
 const url = { type: 'string', description: 'URL path. Default: "/"' };
 const scheme = { type: 'string', description: '"http" or "https". Default: "https"' };
+// Auth-aware scanning — every http.* executor accepts these to reach content
+// behind a login. Spread `...auth` into an executor's inputSchema to advertise them.
+const auth = {
+  bearer: { type: 'string', description: 'Bearer token → Authorization: Bearer <token>' },
+  basic: { type: 'string', description: 'Basic auth "user:pass" → Authorization: Basic <b64>' },
+  cookie: { type: 'string', description: 'Cookie header value (session cookies)' },
+  headers: { type: 'object', description: 'Extra request headers (merged last)' },
+};
 
 /** Web surface — HTTP scanning and read-only exposure checks. */
 export default {
   name: 'web',
-  version: '1.3.0',
+  version: '1.4.0',
   domain: 'web',
   description: 'Web surface — headers/content, header grade, WAF/CDN, tech fingerprint, CORS, methods, cookies, robots, path fuzzing, secrets, open-redirect, subdomain-takeover, .git exposure, Wayback URLs, security.txt/well-known, favicon hashing, and headless screenshots.',
   permissions: { network: ['http', 'https'], env: ['CHROME_PATH', 'PUPPETEER_EXECUTABLE_PATH'], bins: ['google-chrome', 'chromium', 'chromium-browser', 'msedge'] },
@@ -24,22 +32,22 @@ export default {
     {
       uses: 'http.headers', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'HTTP response headers — server banner, security headers, cookies.',
-      run: getHeaders, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: getHeaders, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.get', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'Full HTTP GET — status, headers, and a body snippet.',
-      run: getPath, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: getPath, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.security_score', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'A–F security-header grade with per-header remediation advice.',
-      run: securityScore, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: securityScore, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.waf_detect', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'WAF / CDN fingerprint from headers, cookies, and banners.',
-      run: wafDetect, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: wafDetect, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.fingerprint', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
@@ -54,7 +62,7 @@ export default {
     {
       uses: 'http.methods', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'HTTP methods audit — OPTIONS + risky-method probe (PUT/DELETE/TRACE/PATCH).',
-      run: methods, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: methods, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.fuzz_paths', phase: 'gaining-access', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
@@ -69,7 +77,7 @@ export default {
     {
       uses: 'http.cookies', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'Audit Set-Cookie security flags (Secure / HttpOnly / SameSite).',
-      run: cookies, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: cookies, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.robots', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url'],
@@ -79,12 +87,12 @@ export default {
     {
       uses: 'http.secrets', phase: 'gaining-access', posture: 'active', targetTypes: ['domain', 'url'],
       summary: 'Scan a page body for exposed secrets (API keys, tokens, private keys).',
-      run: secrets, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: secrets, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.open_redirect', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url'],
       summary: 'Probe common open-redirect parameters.',
-      run: openRedirect, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: openRedirect, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'http.subdomain_takeover', phase: 'scanning', posture: 'active', targetTypes: ['domain'],
@@ -99,7 +107,7 @@ export default {
     {
       uses: 'http.graphql', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'Detect a GraphQL endpoint and whether introspection is exposed.',
-      run: graphql, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: graphql, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'web.security_txt', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url'],
@@ -114,7 +122,7 @@ export default {
     {
       uses: 'http.favicon_hash', phase: 'reconnaissance', posture: 'active', targetTypes: ['domain', 'url', 'ip'],
       summary: 'Shodan/Censys favicon hash (mmh3) for infrastructure correlation.',
-      run: faviconHash, inputSchema: { target: { type: 'string' }, path: url, scheme },
+      run: faviconHash, inputSchema: { target: { type: 'string' }, path: url, scheme, ...auth },
     },
     {
       uses: 'web.screenshot', phase: 'scanning', posture: 'active', targetTypes: ['domain', 'url', 'ip'],

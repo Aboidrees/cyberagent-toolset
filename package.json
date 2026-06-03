@@ -1,6 +1,6 @@
 {
   "name": "cyberagent-toolset",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "CyberAgentToolSet (CATS) — an MCP server + CLI that orchestrates authorized security assessments across the attack lifecycle via installable extensions.",
   "type": "module",
   "license": "MIT",
@@ -64,7 +64,8 @@
     "help": "node ./src/index.js --help",
     "validate": "node ./scripts/ci-validate.mjs",
     "eval": "node ./scripts/eval.mjs",
-    "prepublishOnly": "node ./scripts/ci-validate.mjs"
+    "prepublishOnly": "node ./scripts/ci-validate.mjs",
+    "eval:llm": "node ./scripts/eval-llm.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

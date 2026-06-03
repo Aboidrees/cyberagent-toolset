@@ -1,7 +1,7 @@
 import dns from 'dns/promises';
 import axios from 'axios';
 import { validateTarget } from '#sdk';
-import { buildUrl } from './http.js';
+import { buildUrl, authHeaders } from './http.js';
 
 const GET = (url, opts = {}) => axios.get(url, {
   timeout: opts.timeoutMs || 10000,
@@ -9,7 +9,7 @@ const GET = (url, opts = {}) => axios.get(url, {
   maxRedirects: opts.maxRedirects ?? 0,
   maxContentLength: 3_000_000,
   maxBodyLength: 3_000_000,
-  headers: opts.headers,
+  headers: { ...authHeaders(opts), ...(opts.headers || {}) },
 });
 
 // ── web.wayback ──────────────────────────────────────────────────────────────
