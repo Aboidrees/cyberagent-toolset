@@ -101,6 +101,20 @@ assessment conversationally.
 
 ---
 
+## Web dashboard
+
+A local browser UI to browse assessments and runs, drive an assessment
+(start → run → prioritized report), and diff two runs:
+
+```bash
+node src/index.js dashboard            # → http://127.0.0.1:7878
+```
+
+Localhost-bound by design (it can trigger active scans). No new dependency — it's
+built on Node's `http` and reuses the same assessment engine.
+
+---
+
 ## Available playbooks
 
 | Playbook | Steps | Focus |

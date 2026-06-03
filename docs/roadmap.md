@@ -4,7 +4,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.16.0
+## Current state — v0.17.0
 
 | Area | Status |
 | ------ | -------- |
@@ -13,6 +13,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 | **Phase 10 — agent-native MCP surface**: MCP Resources + Prompts, lean tool mode + `cats_execute`, assessment eval harness | ✅ Done |
 | **Phase 11 — target diagnostics**: assessment preflight (`reachability`) + report diagnostics — explicit reason for an empty/dead target; eval skips unresolvable targets | ✅ Done |
 | **Phase 12 — backlog completion**: +4 service probes (mysql/postgres/rdp/ldap); auth-aware scanning; MCP resource subscriptions; LLM-in-the-loop eval framework | ✅ Done |
+| **Phase 13 — web dashboard**: local browser UI (cyberagent dashboard) to browse/drive/diff (Node-http, no new dep, localhost) | ✅ Done |
 | Phase 1 deeper intel · Phase 2 vuln intel · Phase 3 scale & automation | ✅ Done |
 | **Refactor → CyberAgentToolSet (CATS)**: domain-first extensions, catalog, npm plugins | ✅ Done |
 | **Phase 4 expansion**: +12 keyless executors, `nuclei.scan`, key-gated SecurityTrails/Censys/GitHub | ✅ Done |
@@ -36,7 +37,6 @@ agent-driven orchestration layer. Phase 9 landed the keystone (assessments +
 pivots). Remaining moves, in that spirit:
 
 - **LLM-in-the-loop evals (scored)** — Phase 12 shipped the framework + heuristic baseline (`npm run eval:llm`); wire a live agent (API key) and a sharper judge.
-- **Web dashboard** — local UI to browse/diff runs and trigger assessments (in progress).
 - **More tools** — service probes (LDAP, RDP, MySQL/Postgres banner), more cloud providers, screenshot-into-report embedding; more key-gated providers.
 - **Ecosystem** — publish `cyberagent-toolset` + a reference `cyberagent-ext-*` to npm (package is publish-ready: run `npm publish`).
 - **Bigger features** — local web dashboard for browsing/diffing runs; authentication-aware scanning.
