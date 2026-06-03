@@ -40,7 +40,7 @@ Phase 7 — tool expansion. Eight keyless executors and two new extensions
 
 Phase 6 — tool expansion. Three keyless executors (43 total across 13 extensions).
 
-### Added
+### Added for 0.10.0
 
 - **`vuln.epss`** (threat-intel, recon · passive, keyless) — EPSS exploit-probability
   scoring from FIRST.org for one or more CVEs. Pairs with `vuln.cve_lookup` to
@@ -53,7 +53,7 @@ Phase 6 — tool expansion. Three keyless executors (43 total across 13 extensio
   footprint from TXT domain-verification tokens (Google, Microsoft 365, Atlassian,
   Stripe, DocuSign, …). Uses DNS-over-HTTPS with a system-resolver fallback.
 
-### Changed
+### Changed for 0.10.0
 
 - Self-test playbook now exercises 43/43 executors; schema `uses`-enum regenerated.
 
@@ -62,7 +62,7 @@ Phase 6 — tool expansion. Three keyless executors (43 total across 13 extensio
 Phase 5 — hardening + capability unlocks. Adds CI, a license, passive-only safe
 mode, target-aware auto-assembly, and phase-grouped listing/reports.
 
-### Added
+### Added for 0.9.0
 
 - **Passive-only / safe mode** — `--passive` (CLI `run` and `auto`; MCP `cats_run`
   / `cats_run_multi` / `cats_play__`) skips any active executor via per-executor
@@ -82,7 +82,7 @@ mode, target-aware auto-assembly, and phase-grouped listing/reports.
 - **`scripts/ci-validate.mjs`** — deterministic invariants (catalog, playbook/
   watchlist resolution, schema uses-enum sync), usable locally too.
 
-### Changed
+### Changed for 0.9.0
 
 - `runPlaybook` accepts an in-memory `playbook` object (used by `auto`) and a
   `posture` option. Version bumped 0.8.0 → 0.9.0.
