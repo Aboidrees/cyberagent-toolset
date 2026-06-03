@@ -4,7 +4,7 @@
 
 CyberAgentToolSet (CATS) — formerly `mcp-recon-runner` — is an MCP server **and** CLI that orchestrates **authorized** security assessments across the attack lifecycle. Capabilities ship as installable **extensions** (domain modules), the core is a small **engine + catalog**, and everything is driven by YAML playbooks and the Model Context Protocol so Claude (or any MCP client) can run it conversationally.
 
-- **Version:** v0.17.0
+- **Version:** v0.18.0
 - **Scale:** 60 executors across 22 extensions → 82 MCP tools (full mode) + MCP resources & prompts; a lean tool mode trims to 22
 - **Agent-driven:** stateful **assessments** let an AI agent run a full investigation — start → run → (entities discovered → new pivots) → prioritized report.
 - **Repo:** [github.com/Aboidrees/cyberagent-toolset](https://github.com/Aboidrees/cyberagent-toolset) (public)
@@ -39,6 +39,7 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | Phase 11 — Target diagnostics | 0.15.0 | Assessment **preflight** (`reachability`) + report **diagnostics** — a nonexistent/non-resolving target gets an explicit reason (`ENOTFOUND`) instead of a silent blank; eval **skips** dead targets | PR open |
 | Phase 12 — Backlog completion | 0.16.0 | +4 service probes (`mysql`/`postgres`/`rdp`/`ldap`); auth-aware scanning (Bearer/Basic/Cookie on `http.*`); MCP **resource subscriptions** (`resources/updated`); **LLM-in-the-loop eval** framework (`npm run eval:llm`); 60/60 self-test | PR open |
 | Phase 13 — Web dashboard | 0.17.0 | Local browser UI (`cyberagent dashboard`) — browse assessments/runs, drive an assessment (start → run → report), diff runs; Node-`http`, no new dep, localhost-bound | PR open |
+| Phase 14 — Robustness | 0.18.0 | **Unit test suite** (`npm test`, 21 tests, no network) for the binary parsers (SMB/SSH/RDP/LDAP/MySQL/Postgres/SNMP-BER), input validation, entities, pivots, synthesis; wired into CI; tools lower-bound 40→80 | PR open |
 
 ## 3. Architecture (current)
 
@@ -135,11 +136,11 @@ runs/           generated reports (gitignored)
 
 ## 10. Verification posture
 
-The project has **no automated test framework by design** (executors are live-network). The regression oracle is the `all-tools-selftest` playbook, which exercises every executor once — currently **56/56 green**. Every phase kept it green; every executor was also smoke-tested live; the MCP server boots clean; `node --check` passes on all source; npm-plugin discovery was proven with a throwaway extension. Each phase shipped via its own PR with an adversarial pre-landing review (which caught real bugs: SSRF/host-override in URL building, ASN injection, TLS timer leaks, the CONNECT-method hang, multi-request timeout coupling, banner SYN-drop hang).
+The project has two test layers: a **unit suite** (`npm test`, 21 tests on `node:test`, no network) covering the security-critical input validation and the hand-rolled binary parsers (SMB/SSH/RDP/LDAP/MySQL/Postgres/SNMP-BER), entity extraction, the pivot engine, and report synthesis; and the live-network **`all-tools-selftest`** playbook as the integration oracle — currently **60/60 green**. Every phase kept it green; every executor was also smoke-tested live; the MCP server boots clean; `node --check` passes on all source; npm-plugin discovery was proven with a throwaway extension. Each phase shipped via its own PR with an adversarial pre-landing review (which caught real bugs: SSRF/host-override in URL building, ASN injection, TLS timer leaks, the CONNECT-method hang, multi-request timeout coupling, banner SYN-drop hang).
 
 ## 11. Known limitations & honest gaps
 
-- **No unit/integration tests** — by design (live-network); the 56/56 self-test is the oracle, but it needs network and isn't a substitute for fast unit tests.
+- **Integration tests need network** — unit tests (`npm test`) now cover the parsers and pure logic offline, but the `all-tools-selftest` integration oracle still needs network and isn't a substitute for more unit coverage of executor I/O paths.
 - **CI** *(added v0.9.0)* — GitHub Actions runs a deterministic validate gate + a self-test smoke job on every PR.
 - **License** *(added v0.9.0)* — a `LICENSE` file (MIT) is now committed.
 - **Not yet *published* to npm** — the package is publish-ready (bin shebangs, `files` whitelist, repo metadata, `prepublishOnly` gate) and ships a starter template (`templates/cyberagent-ext-starter/`), but nothing is on the registry yet — `npm publish` hasn't been run.
@@ -267,4 +268,4 @@ The project has **no automated test framework by design** (executors are live-ne
 
 - **Nuclei** — an external open-source scanner with thousands of community-maintained templates (CVEs, exposures, misconfigurations, takeovers, default creds). CATS wraps it as the `nuclei.scan` executor — the "multiplier," because one executor pulls in that whole template library. No-ops with a note when the `nuclei` binary isn't installed.
 - **Template (Nuclei)** — a single Nuclei check definition (one CVE, one exposure rule, etc.). Nuclei ships thousands; `nuclei.scan` runs the chosen set against the target.
-- **Self-test / regression oracle** — the `all-tools-selftest` playbook, which exercises every executor exactly once. Because the project intentionally has no unit-test framework (the checks are live-network), this playbook passing 56/56 is the main correctness signal after any change.
+- **Self-test / regression oracle** — the `all-tools-selftest` playbook, which exercises every executor exactly once. Alongside the offline `npm test` unit suite, this playbook passing 60/60 is the main integration signal after any change.
