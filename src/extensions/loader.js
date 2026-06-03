@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { validateTarget, validateNmapFlags, normalizeSeverity, severityRank } from '#sdk';
+import { validateTarget, validateNmapFlags, normalizeSeverity, severityRank, isCommandAvailable } from '#sdk';
 
 /**
  * Extension loader.
@@ -18,10 +18,54 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', '..');
 const EXT_DIR = path.join(ROOT, 'extensions');
 
-// Shared services injected into every executor's run(target, opts, ctx).
-const CTX = Object.freeze({ validateTarget, validateNmapFlags, normalizeSeverity, severityRank });
+// Stable shared services every executor's ctx is built from.
+const BASE_CTX = { validateTarget, validateNmapFlags, normalizeSeverity, severityRank };
 
 let _catalog = null;
+
+/**
+ * Normalize an extension's declared permissions to { network[], env[], bins[] }.
+ * Warns (once) on a malformed manifest so authors notice, without failing load.
+ */
+function normalizePermissions(descriptor) {
+  const p = descriptor.permissions || {};
+  const arr = (v, field) => {
+    if (v === undefined) return [];
+    if (Array.isArray(v) && v.every(x => typeof x === 'string')) return v;
+    process.stderr.write(`[permissions] ${descriptor.name}: permissions.${field} must be a string[] — ignoring\n`);
+    return [];
+  };
+  return { network: arr(p.network, 'network'), env: arr(p.env, 'env'), bins: arr(p.bins, 'bins') };
+}
+
+/**
+ * Build the permission-scoped ctx injected into an extension's executors.
+ * `ctx.env(key)` and `ctx.requireBin(name)` enforce the extension's declared
+ * `permissions`: in strict mode an undeclared access throws; otherwise it warns
+ * (once per key) but still proceeds, so existing extensions keep working.
+ */
+function makeCtx(descriptor, permissions, strict) {
+  const declaredEnv = new Set(permissions.env);
+  const declaredBins = new Set(permissions.bins);
+  const warned = new Set();
+  const warnOrThrow = (kind, name) => {
+    const msg = `[permissions] ${descriptor.name}: undeclared ${kind} "${name}" (add it to permissions.${kind === 'env' ? 'env' : 'bins'})`;
+    if (strict) throw new Error(msg);
+    if (!warned.has(`${kind}:${name}`)) { warned.add(`${kind}:${name}`); process.stderr.write(msg + '\n'); }
+  };
+  return Object.freeze({
+    ...BASE_CTX,
+    permissions,
+    env(key) {
+      if (!declaredEnv.has(key)) warnOrThrow('env', key);
+      return process.env[key];
+    },
+    async requireBin(name) {
+      if (!declaredBins.has(name)) warnOrThrow('bins', name);
+      return isCommandAvailable(name);
+    },
+  });
+}
 
 async function importDescriptor(specifier, source) {
   const mod = await import(specifier);
@@ -81,9 +125,10 @@ async function loadNpm() {
 /**
  * Build (and memoize) the catalog from all discovered extensions.
  */
-export async function loadCatalog({ reload = false } = {}) {
+export async function loadCatalog({ reload = false, strictPermissions } = {}) {
   if (_catalog && !reload) return _catalog;
 
+  const strict = strictPermissions ?? (process.env.CATS_STRICT_PERMISSIONS === '1');
   const descriptors = [...(await loadLocal()), ...(await loadNpm())];
 
   const registry = {};          // uses -> (target, opts) => data
@@ -93,6 +138,10 @@ export async function loadCatalog({ reload = false } = {}) {
   const byDomain = {};
 
   for (const d of descriptors) {
+    // One permission-scoped ctx per extension, reused across its executors.
+    const permissions = normalizePermissions(d);
+    d.permissions = permissions;
+    const ctx = makeCtx(d, permissions, strict);
     for (const e of d.executors || []) {
       if (!e.uses || typeof e.run !== 'function') {
         process.stderr.write(`[extensions] ${d.name}: executor missing uses/run — skipped\n`);
@@ -111,10 +160,10 @@ export async function loadCatalog({ reload = false } = {}) {
         targetTypes: e.targetTypes || [],
         summary: e.summary || '',
         inputSchema: e.inputSchema || null,
-        permissions: d.permissions || {},
+        permissions,
       };
-      // Bind the injected ctx so callers keep the simple (target, opts) signature.
-      registry[e.uses] = (target, opts) => e.run(target, opts || {}, CTX);
+      // Bind the per-extension scoped ctx so callers keep the (target, opts) signature.
+      registry[e.uses] = (target, opts) => e.run(target, opts || {}, ctx);
       executors.push(meta);
       if (d.report) reportersByUses[e.uses] = d.report;
       (byPhase[meta.phase] ||= []).push(meta);
