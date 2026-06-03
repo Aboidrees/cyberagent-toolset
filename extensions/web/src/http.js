@@ -10,6 +10,23 @@ import { validateTarget } from '#sdk';
  * host override): scheme is whitelisted to http/https, and the path may not
  * contain credentials, whitespace, backslashes, or a protocol-relative prefix.
  */
+/**
+ * Build auth/extra headers for a request from the executor's options, so web
+ * checks can reach content behind a login:
+ *   opts.bearer  → Authorization: Bearer <token>
+ *   opts.basic   → Authorization: Basic base64("user:pass")
+ *   opts.cookie  → Cookie: <string>
+ *   opts.headers → arbitrary extra headers (object), merged last.
+ */
+export function authHeaders(opts = {}) {
+  const h = {};
+  if (opts.bearer) h.Authorization = `Bearer ${opts.bearer}`;
+  else if (opts.basic) h.Authorization = `Basic ${Buffer.from(String(opts.basic)).toString('base64')}`;
+  if (opts.cookie) h.Cookie = String(opts.cookie);
+  if (opts.headers && typeof opts.headers === 'object') Object.assign(h, opts.headers);
+  return h;
+}
+
 export function buildUrl(scheme, host, urlPath = '/') {
   const safeScheme = scheme === 'http' ? 'http' : 'https';
   const p = urlPath || '/';
@@ -34,6 +51,7 @@ export async function getHeaders(target, opts = {}) {
 
   const res = await axios.get(url, {
     timeout: opts.timeoutMs || 10000,
+    headers: { ...authHeaders(opts) },
     validateStatus: () => true,   // never throw on HTTP error codes
     maxRedirects: 5,
     maxContentLength: 5_000_000,
@@ -53,6 +71,7 @@ export async function getPath(target, opts = {}) {
 
   const res = await axios.get(url, {
     timeout: opts.timeoutMs || 10000,
+    headers: { ...authHeaders(opts) },
     validateStatus: () => true,
     maxRedirects: 5,
     maxContentLength: 5_000_000,
@@ -110,6 +129,7 @@ export async function securityScore(target, opts = {}) {
 
   const res = await axios.get(url, {
     timeout: opts.timeoutMs || 10000,
+    headers: { ...authHeaders(opts) },
     validateStatus: () => true,
     maxRedirects: 5,
     maxContentLength: 5_000_000,
@@ -179,6 +199,7 @@ export async function wafDetect(target, opts = {}) {
 
   const res = await axios.get(url, {
     timeout: opts.timeoutMs || 10000,
+    headers: { ...authHeaders(opts) },
     validateStatus: () => true,
     maxRedirects: 5,
     maxContentLength: 5_000_000,
@@ -262,6 +283,7 @@ export async function fingerprint(target, opts = {}) {
 
   const res = await axios.get(url, {
     timeout: opts.timeoutMs || 10000,
+    headers: { ...authHeaders(opts) },
     validateStatus: () => true,
     maxRedirects: 5,
     maxContentLength: 5_000_000,
@@ -362,6 +384,7 @@ export async function fuzzPaths(target, opts = {}) {
       const url = buildUrl(scheme, cleanTarget, path);
       const res = await axios.get(url, {
         timeout: reqTimeoutMs,
+        headers: { ...authHeaders(opts) },
         validateStatus: () => true,
         maxRedirects: 0,
         maxContentLength: 2_000_000,
@@ -410,6 +433,7 @@ export async function gitLeak(target, opts = {}) {
     try {
       const res = await axios.get(buildUrl(scheme, cleanTarget, path), {
         timeout: timeoutMs,
+        headers: { ...authHeaders(opts) },
         validateStatus: () => true,
         maxRedirects: 0,
         maxContentLength: 2_000_000,
@@ -480,6 +504,7 @@ export async function corsCheck(target, opts = {}) {
 
   const res = await axios.get(url, {
     timeout: opts.timeoutMs || 10000,
+    headers: { ...authHeaders(opts) },
     validateStatus: () => true,
     maxRedirects: 2,
     maxContentLength: 2_000_000,
