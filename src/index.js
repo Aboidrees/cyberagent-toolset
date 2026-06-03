@@ -192,6 +192,39 @@ await yargs(hideBin(process.argv))
       console.log(`Report written: ${out}`);
     })
   )
+  // ── capabilities / list ─────────────────────────────────────────────────────
+  .command(
+    ['capabilities', 'list'],
+    'List every executor grouped by phase / posture / domain',
+    y => y.option('json', { type: 'boolean', default: false, describe: 'Output the raw catalog as JSON' }),
+    wrap(async argv => {
+      const catalog = await loadCatalog();
+      if (argv.json) {
+        console.log(JSON.stringify({
+          executors: catalog.executors,
+          byPhase: Object.fromEntries(Object.entries(catalog.byPhase).map(([k, v]) => [k, v.map(e => e.uses)])),
+        }, null, 2));
+        return;
+      }
+      console.log(`CyberAgentToolSet (CATS) — ${catalog.executors.length} executors across ${catalog.descriptors.length} extensions\n`);
+      for (const phase of ['reconnaissance', 'scanning', 'gaining-access']) {
+        const list = catalog.byPhase[phase] || [];
+        if (!list.length) continue;
+        console.log(`${phase.toUpperCase()} (${list.length})`);
+        for (const posture of ['passive', 'active']) {
+          const sub = list.filter(e => e.posture === posture);
+          if (!sub.length) continue;
+          console.log(`  ${posture}:`);
+          const byDomain = {};
+          for (const e of sub) (byDomain[e.domain] ||= []).push(e.uses);
+          for (const d of Object.keys(byDomain).sort()) {
+            console.log(`    ${d.padEnd(15)} ${byDomain[d].sort().join(', ')}`);
+          }
+        }
+        console.log('');
+      }
+    })
+  )
   .strict()
   .help()
   .alias('help', 'h')

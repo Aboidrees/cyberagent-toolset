@@ -125,9 +125,28 @@ export async function runPlaybook({ playbookPath, playbook, outDir, varOverrides
   // risk matrix, and webhook notifications.
   const findings = extractFindings(report, catalog.reportersByUses);
   const counts = severityCounts(findings);
+
+  // Annotate outputs + findings with their executor's phase/posture/domain, and
+  // compute per-phase coverage (for the phase-grouped report views).
+  for (const o of outputs) {
+    const m = metaByUses.get(o.uses);
+    if (m) { o.phase = m.phase; o.posture = m.posture; o.domain = m.domain; }
+  }
+  for (const f of findings) {
+    const m = metaByUses.get(f.uses);
+    if (m) f.phase = m.phase;
+  }
+  const phaseCoverage = {};
+  for (const o of outputs) {
+    const ph = o.phase || 'other';
+    const c = (phaseCoverage[ph] ||= { ran: 0, skipped: 0, failed: 0 });
+    if (o.skipped) c.skipped++; else if (o.ok) c.ran++; else c.failed++;
+  }
+
   report.findings = findings;
   report.severityCounts = counts;
   report.topSeverity = findings.length ? topSeverity(findings) : null;
+  report.phaseCoverage = phaseCoverage;
 
   const base = timestampFile(title.replace(/\s+/g, '_'));
   const jsonPath = path.join(outDir, `${base}.json`);
@@ -150,13 +169,28 @@ export async function runPlaybook({ playbookPath, playbook, outDir, varOverrides
     '| -------- | ---- | ------ | --- | ---- |',
     `| ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} | ${counts.info} |`,
     '',
+    '**Coverage by phase:** ' + (['reconnaissance', 'scanning', 'gaining-access']
+      .filter(ph => phaseCoverage[ph])
+      .map(ph => {
+        const c = phaseCoverage[ph];
+        const extra = [c.skipped ? `${c.skipped} skipped` : '', c.failed ? `${c.failed} failed` : ''].filter(Boolean).join(', ');
+        return `${ph} ${c.ran}${extra ? ` (${extra})` : ''}`;
+      }).join(' · ') || 'none'),
+    '',
   ];
   if (findings.length) {
-    mdParts.push('### Findings', '');
-    for (const f of findings.slice(0, 50)) {
-      mdParts.push(`- **[${f.severity.toUpperCase()}]** ${f.message} — \`${f.uses}\` (${f.step})`);
+    mdParts.push('### Findings by phase', '');
+    const byPhase = {};
+    for (const f of findings) (byPhase[f.phase || 'other'] ||= []).push(f);
+    for (const ph of ['reconnaissance', 'scanning', 'gaining-access', 'other']) {
+      const list = byPhase[ph];
+      if (!list || !list.length) continue;
+      mdParts.push(`**${ph}** (${list.length})`, '');
+      for (const f of list.slice(0, 50)) {
+        mdParts.push(`- **[${f.severity.toUpperCase()}]** ${f.message} — \`${f.uses}\` (${f.step})`);
+      }
+      mdParts.push('');
     }
-    mdParts.push('');
   }
   mdParts.push('## Steps & Results');
   for (const o of outputs) {
