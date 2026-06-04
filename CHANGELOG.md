@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.22.3] - 2026-06-04
+
+Usability fix for global installs — `cyberagent -p <id>` previously required a
+full path to a playbook file, which broke when installed globally (the cwd has no
+`playbooks/` directory).
+
+### Added for 0.22.3
+
+- **`cyberagent playbooks`** (alias `pb`) — list every bundled playbook with its
+  steps, focus, executors, and default vars; `--json` for machine output.
+- **`--help` now lists available playbooks** — the `run` command's help shows
+  every playbook id and step count.
+
+### Fixed for 0.22.3
+
+- **`-p` / `--playbook` accepts a bare id** — e.g. `-p quick-web-recon` resolves
+  against the bundled playbooks; a `.yaml`/`.md` file path still works. Resolution
+  is shared by `run` and `schedule` (the scheduler now also accepts `.yaml`
+  paths, not just `.md`). Unknown ids print the full list of valid ids.
+
 ## [0.22.2] - 2026-06-04
 
 ### Fixed for 0.22.2

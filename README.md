@@ -127,6 +127,16 @@ built on Node's `http` and reuses the same assessment engine.
 
 ## Available playbooks
 
+Pass any playbook **id** straight to `-p` (no path or `.yaml` needed) — it resolves
+against the bundled playbooks, so it works the same whether CATS is installed
+globally or run from source. Run `cyberagent playbooks` to list them all with
+their steps and executors.
+
+```bash
+cyberagent playbooks                                  # list every playbook
+cyberagent -p quick-web-recon --target example.com    # run one by id
+```
+
 | Playbook | Steps | Focus |
 | ---------- | ------- | ------- |
 | `quick-web-recon` | 8 | Fast essentials — DNS, headers, TLS, subdomains |

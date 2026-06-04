@@ -16,6 +16,38 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const PLAYBOOKS_DIR = path.join(__dirname, '..', '..', 'playbooks');
 
 /**
+ * Resolve a `-p` / `--playbook` argument to an absolute playbook file path.
+ *
+ * Accepts either:
+ *   - a path to an existing .yaml/.yml/.md file (relative or absolute), or
+ *   - a bare playbook id (e.g. "quick-web-recon"), resolved against the
+ *     bundled playbooks/ directory — so it works the same whether CATS is run
+ *     from source or installed globally (where the cwd has no playbooks/).
+ *
+ * Throws with the list of available ids when nothing matches.
+ */
+export async function resolvePlaybook(arg) {
+  if (!arg) throw new Error('No playbook given. Pass a playbook id (e.g. "quick-web-recon") or a path to a .yaml file.');
+
+  // 1) An existing file path wins (covers .yaml/.yml/.md, relative or absolute).
+  const asPath = path.resolve(arg);
+  try {
+    if ((await fs.stat(asPath)).isFile()) return asPath;
+  } catch { /* not a file — fall through to id resolution */ }
+
+  // 2) Treat it as an id. Strip a trailing extension so "quick-web-recon.yaml"
+  //    (without the dir) still resolves by id.
+  const id = arg.replace(/\.(ya?ml|md)$/i, '');
+  const all = await loadPlaybooks();
+  const pb = all.find(p => p.id === id);
+  if (pb) return pb.file;
+
+  throw new Error(
+    `Playbook "${arg}" not found. Pass a .yaml path or one of these ids:\n  ${all.map(p => p.id).join('\n  ')}`
+  );
+}
+
+/**
  * Convert a playbook id like "web-basic-recon" to a safe MCP tool
  * name suffix like "web_basic_recon".
  */

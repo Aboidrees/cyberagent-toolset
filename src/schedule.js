@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import path from 'path';
 import fs from 'fs/promises';
 import { runPlaybook } from './runner.js';
-import { loadPlaybooks } from './utils/playbooks.js';
+import { resolvePlaybook } from './utils/playbooks.js';
 import { ensureDir } from './utils/fsx.js';
 import { loadCatalog } from './extensions/loader.js';
 import { createAssessment, runStep, saveAssessment, preflightTarget } from './assessment.js';
@@ -17,26 +17,15 @@ import { notify } from './utils/notify.js';
  * findings flow through the normal report + webhook-notification path, so
  * configuring SLACK_WEBHOOK_URL / WEBHOOK_URL turns this into a monitoring loop.
  *
- * Resolves the playbook by id (from playbooks/) or by direct .md file path.
+ * Resolves the playbook by id (from playbooks/) or by direct .yaml/.md file path.
  */
 export async function scheduleScan({ playbook, target, cronExpr, outDir, stepTimeoutMs, runImmediately = false, log = console.error }) {
   if (!cron.validate(cronExpr)) {
     throw new Error(`Invalid cron expression: "${cronExpr}"`);
   }
 
-  // Resolve the playbook file: a path ending in .md is used directly, otherwise
-  // it is looked up by id.
-  let playbookPath;
-  if (playbook.endsWith('.md')) {
-    playbookPath = path.resolve(playbook);
-  } else {
-    const all = await loadPlaybooks();
-    const pb = all.find(p => p.id === playbook);
-    if (!pb) {
-      throw new Error(`Playbook "${playbook}" not found. Available: ${all.map(p => p.id).join(', ')}`);
-    }
-    playbookPath = pb.file;
-  }
+  // Resolve the playbook by id (bundled) or by direct .yaml/.md path.
+  const playbookPath = await resolvePlaybook(playbook);
 
   await ensureDir(outDir);
 

@@ -19,6 +19,7 @@ import { synthesize, diffAssessments, assessmentDiffHasChanges, renderAssessment
 import { generateReport } from './report.js';
 import { notify } from './utils/notify.js';
 import { startDashboard } from './dashboard.js';
+import { loadPlaybooks, resolvePlaybook } from './utils/playbooks.js';
 
 /**
  * CLI entry point. Multi-command:
@@ -94,6 +95,13 @@ const wrap = (fn) => async (argv) => {
   }
 };
 
+// Preload playbook metadata so --help can list every available playbook by id.
+const PLAYBOOKS = await loadPlaybooks();
+const playbookHelp = PLAYBOOKS.length
+  ? 'Available playbooks (pass the id to -p):\n' +
+    PLAYBOOKS.map(p => `  ${p.id.padEnd(28)} ${p.stepCount} steps — ${p.title}`).join('\n')
+  : '';
+
 await yargs(hideBin(process.argv))
   .scriptName('cyberagent')
   // ── run (default) ──────────────────────────────────────────────────────────
@@ -101,17 +109,21 @@ await yargs(hideBin(process.argv))
     ['run', '$0'],
     'Run a playbook against a target',
     y => y
-      .option('p', { alias: 'playbook', type: 'string', demandOption: true, describe: 'Path to playbook .yaml (or legacy .md) file' })
+      .option('p', { alias: 'playbook', type: 'string', demandOption: true, describe: 'Playbook id (e.g. quick-web-recon) or path to a .yaml/.md file' })
       .option('target', { alias: 't', type: 'string', describe: 'Recon target (shorthand for --var target=<value>)' })
       .option('var', { type: 'array', describe: 'Override playbook vars, e.g. --var scheme=http' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors (no packets to the host)' })
-      .example('$0 -p playbooks/quick-web-recon.yaml --target fortmind.qa', 'Run a playbook'),
+      .example('$0 -p quick-web-recon --target fortmind.qa', 'Run a bundled playbook by id')
+      .example('$0 -p ./my-playbook.yaml --target fortmind.qa', 'Run a playbook from a file')
+      .example('$0 playbooks', 'List every available playbook and its steps')
+      .epilogue(playbookHelp),
     wrap(async argv => {
       await ensureDir(argv.out);
+      const playbookPath = await resolvePlaybook(argv.playbook);
       const r = await runPlaybook({
-        playbookPath: argv.playbook,
+        playbookPath,
         outDir: argv.out,
         varOverrides: collectVars(argv),
         stepTimeoutMs: argv.timeout,
@@ -261,6 +273,31 @@ await yargs(hideBin(process.argv))
       console.log(`Report written: ${out}`);
     })
   )
+  // ── playbooks ─────────────────────────────────────────────────────────────
+  .command(
+    ['playbooks', 'pb'],
+    'List available playbooks with their steps, focus, and executors',
+    y => y.option('json', { type: 'boolean', default: false, describe: 'Output the playbook catalog as JSON' }),
+    wrap(async argv => {
+      const all = await loadPlaybooks();
+      if (argv.json) {
+        console.log(JSON.stringify(all, null, 2));
+        return;
+      }
+      console.log(`CyberAgentToolSet (CATS) — ${all.length} playbooks\n`);
+      for (const p of all) {
+        console.log(`${p.id}  —  ${p.title}  (${p.stepCount} steps)`);
+        if (p.description) console.log(`  ${p.description}`);
+        if (p.executors?.length) console.log(`  executors: ${p.executors.join(', ')}`);
+        if (p.defaultVars && Object.keys(p.defaultVars).length) {
+          console.log(`  vars: ${Object.entries(p.defaultVars).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+        }
+        console.log('');
+      }
+      console.log('Run one with:  cyberagent -p <id> --target <host>');
+    })
+  )
+
   // ── capabilities / list ─────────────────────────────────────────────────────
   .command(
     ['capabilities', 'list'],
