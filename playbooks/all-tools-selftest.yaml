@@ -9,7 +9,7 @@ description: >-
   Diagnostic playbook that exercises every executor exactly once against a target — confirms the whole engine
   works end to end.
 vars:
-  target: fortmind.qa
+  target: example.com
   scheme: https
   topPorts: 100
 steps:

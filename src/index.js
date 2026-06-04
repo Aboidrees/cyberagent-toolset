@@ -115,8 +115,8 @@ await yargs(hideBin(process.argv))
       .option('out', { type: 'string', default: process.env.CATS_RUNS_DIR || './runs', describe: 'Output directory for reports (defaults to $CATS_RUNS_DIR or ./runs)' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors (no packets to the host)' })
-      .example('$0 -p quick-web-recon --target fortmind.qa', 'Run a bundled playbook by id')
-      .example('$0 -p ./my-playbook.yaml --target fortmind.qa', 'Run a playbook from a file')
+      .example('$0 -p quick-web-recon --target example.com', 'Run a bundled playbook by id')
+      .example('$0 -p ./my-playbook.yaml --target example.com', 'Run a playbook from a file')
       .example('$0 playbooks', 'List every available playbook and its steps')
       .epilogue(playbookHelp),
     wrap(async argv => {
@@ -229,8 +229,8 @@ await yargs(hideBin(process.argv))
       .option('top', { type: 'number', default: 5, describe: 'Suggestions to run per round (assessment mode)' })
       .option('max-rounds', { type: 'number', default: 12, describe: 'Safety cap on assessment rounds' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
-      .example('$0 schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"', 'Playbook every Monday 08:00')
-      .example('$0 schedule --assess fortmind.qa --cron "0 6 * * *"', 'Full assessment every day 06:00'),
+      .example('$0 schedule --playbook quick-web-recon --target example.com --cron "0 8 * * 1"', 'Playbook every Monday 08:00')
+      .example('$0 schedule --assess example.com --cron "0 6 * * *"', 'Full assessment every day 06:00'),
     wrap(async argv => {
       if (argv.assess) {
         await scheduleAssessment({

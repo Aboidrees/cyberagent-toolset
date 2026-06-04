@@ -41,7 +41,7 @@ if (!TARGET) {
   console.error('Usage: node scripts/eval-llm.mjs <target> [--agent heuristic|api|claude-code]\n' +
     '  e.g. node scripts/eval-llm.mjs example.com --agent claude-code\n\n' +
     'Provide an authorized target — there is no default. Targets with a golden\n' +
-    'spec in this file (example.com, fortmind.qa) also get target-specific scoring.');
+    'spec in this file (example.com, example.com) also get target-specific scoring.');
   process.exit(2);
 }
 
@@ -165,7 +165,7 @@ const GOLDEN = {
     entityTypes: ['ip'],
     minFindings: 0,
   },
-  'fortmind.qa': {
+  'example.com': {
     minExecutors: 8,
     executors: ['dns.resolve', 'subdomains.passive', 'tls.inspect', 'http.security_score', 'email.security'],
     entityTypes: ['ip', 'subdomain'],

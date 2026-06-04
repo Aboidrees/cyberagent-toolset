@@ -7,7 +7,7 @@ id: owasp-top10-recon
 title: OWASP Top 10 Reconnaissance
 description: Maps the recon phase of each OWASP Top 10 (2021) category to the executor that gathers the relevant signal.
 vars:
-  target: fortmind.qa
+  target: example.com
   scheme: https
   timeout: 10000
 steps:

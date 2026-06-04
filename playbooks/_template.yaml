@@ -20,7 +20,7 @@ description: One-line summary of what this playbook does (shown as the tool desc
 # Reference anywhere with {{vars.name}} (a whole-string numeric template is
 # coerced back to a number).
 vars:
-  target: fortmind.qa
+  target: example.com
   scheme: https
   timeout: 10000
 

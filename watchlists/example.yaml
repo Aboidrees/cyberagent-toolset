@@ -13,12 +13,12 @@ vars:
   scheme: https
 
 targets:
-  - host: fortmind.qa
+  - host: example.com
     playbooks:
       - quick-web-recon
       - web-headers-assessment
 
-  - host: api.fortmind.qa
+  - host: api.example.com
     playbooks:
       - api-cloud-recon
       - email-security-assessment

@@ -62,7 +62,7 @@ Reports are saved to `runs/` as `.json` and `.md`.
 
 ```bash
 # Auto-run every applicable executor (no playbook); --passive for OSINT-only scope
-node src/index.js auto --target cyberany.org
+node src/index.js auto --target example.com
 
 # List capabilities by phase / posture / domain
 node src/index.js capabilities
@@ -74,7 +74,7 @@ node src/index.js diff runs/old.json runs/new.json
 node src/index.js watch --list watchlists/example.yaml
 
 # Schedule a recurring scan (new findings fire webhooks)
-node src/index.js schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"
+node src/index.js schedule --playbook quick-web-recon --target example.com --cron "0 8 * * 1"
 
 # Export a run to PDF / DOCX / HTML
 node src/index.js report runs/run.json --format pdf --out report.pdf

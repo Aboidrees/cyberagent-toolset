@@ -6,7 +6,7 @@ id: email-security-assessment
 title: Email Security Assessment
 description: Email authentication posture — SPF, DMARC, DKIM, MTA-STS, and BIMI — via passive DNS lookups.
 vars:
-  target: fortmind.qa
+  target: example.com
 steps:
   - name: Email Security Posture
     uses: email.security

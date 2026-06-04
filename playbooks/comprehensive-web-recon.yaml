@@ -7,7 +7,7 @@ id: comprehensive-web-recon
 title: Comprehensive Web Reconnaissance
 description: Extensive reconnaissance — detailed DNS, infrastructure, security headers, and technology fingerprinting.
 vars:
-  target: fortmind.qa
+  target: example.com
   scheme: https
   topPorts: 1000
   fullPorts: false

@@ -10,9 +10,9 @@ import { ensureDir } from './utils/fsx.js';
  *
  * watchlist.yml:
  *   targets:
- *     - host: fortmind.qa
+ *     - host: example.com
  *       playbooks: [quick-web-recon, web-security-recon]
- *     - host: api.fortmind.qa
+ *     - host: api.example.com
  *       playbooks: [api-cloud-recon]
  *   vars:               # optional, applied to every run
  *     scheme: https
