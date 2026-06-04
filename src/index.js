@@ -50,6 +50,26 @@ function printSuggestions(next) {
   }
 }
 
+// Drive an assessment to completion: run the top-N suggestions round after round
+// until the pivot engine is exhausted (or the safety cap is hit). Imported lazily
+// inside the command to keep this module's top tidy.
+async function driveAssessment(session, catalog, runStep, suggest, saveAssessment, { posture, top, maxRounds }) {
+  let round = 0;
+  while (round < maxRounds) {
+    const batch = suggest(session, catalog, { posture, limit: top });
+    if (!batch.length) break;
+    round++;
+    console.log(`\n── round ${round} (${batch.length} actions) ──`);
+    for (const s of batch) {
+      process.stdout.write(`▶ ${s.uses} on ${s.target} … `);
+      const r = await runStep(session, s, catalog);
+      console.log(r.ok ? `ok (+${r.newFindings.length} findings, +${r.newEntities.length} entities)` : `error: ${r.error}`);
+    }
+    await saveAssessment(session);
+  }
+  return round;
+}
+
 // Wrap an async command handler so any thrown error is reported cleanly and the
 // process exits non-zero (yargs does not reliably propagate async rejections).
 const wrap = (fn) => async (argv) => {
@@ -277,7 +297,9 @@ await yargs(hideBin(process.argv))
       .positional('action', { choices: ['start', 'next', 'run', 'report', 'list'], describe: 'Assessment action' })
       .positional('idOrTarget', { type: 'string', describe: 'Target (start) or assessment id (next/run/report)' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: restrict to passive executors' })
-      .option('top', { type: 'number', default: 5, describe: 'How many top suggestions to run/show' })
+      .option('top', { type: 'number', default: 5, describe: 'How many top suggestions to run per round' })
+      .option('full', { type: 'boolean', default: false, describe: 'Drive to completion — loop until no pivots remain (start/run)' })
+      .option('max-rounds', { type: 'number', default: 12, describe: 'Safety cap on --full rounds. Default: 12' })
       .option('uses', { type: 'string', describe: 'Run a specific executor (with --on)' })
       .option('on', { type: 'string', describe: 'Target for --uses (defaults to the assessment target)' })
       .option('json', { type: 'boolean', default: false, describe: 'JSON output (report/next)' })
@@ -305,9 +327,16 @@ await yargs(hideBin(process.argv))
           console.log(`\n⚠ Target does not resolve (${reach.reason}) — likely a typo or nonexistent. ` +
             `Passive sources will find little; double-check the hostname.`);
         }
+        if (argv.full && reach.resolves) {
+          const rounds = await driveAssessment(session, catalog, runStep, suggest, saveAssessment, { posture, top: argv.top, maxRounds: argv['max-rounds'] });
+          console.log(`\n✅ Full assessment complete (${rounds} rounds, ${session.steps.length} steps, ${session.findings.length} findings).`);
+          console.log(`Report: cyberagent assess report ${session.id}`);
+          return;
+        }
         const next = suggest(session, catalog, { posture, limit: argv.top });
         printSuggestions(next);
         console.log(`\nRun the top ${argv.top}:  cyberagent assess run ${session.id} --top ${argv.top}${argv.passive ? ' --passive' : ''}`);
+        console.log(`Or run the whole thing:  cyberagent assess start ${session.target} --full${argv.passive ? ' --passive' : ''}`);
         return;
       }
 
@@ -322,6 +351,12 @@ await yargs(hideBin(process.argv))
       }
 
       if (argv.action === 'run') {
+        if (argv.full && !argv.uses) {
+          const rounds = await driveAssessment(session, catalog, runStep, suggest, saveAssessment, { posture, top: argv.top, maxRounds: argv['max-rounds'] });
+          console.log(`\n✅ Full assessment complete (${rounds} rounds, ${session.steps.length} steps, ${session.findings.length} findings).`);
+          console.log(`Report: cyberagent assess report ${session.id}`);
+          return;
+        }
         let toRun;
         if (argv.uses) {
           toRun = [{ uses: argv.uses, target: argv.on || session.target, opts: {} }];
