@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.22.4] - 2026-06-04
+
+Configurable paths and robust env loading — makes API keys, custom playbooks, and
+report output work cleanly for **globally-installed** CLIs and the MCP server
+(which a GUI client launches with an unpredictable cwd and no shell profile).
+
+### Added for 0.22.4
+
+- **`CATS_PLAYBOOKS_DIR`** — point it at a directory of your own `.yaml`
+  playbooks; they merge with the bundled ones across the CLI (`-p <id>`,
+  `playbooks`) and the MCP server (one tool each). A custom id overrides a
+  built-in. `cyberagent playbooks` marks custom entries `[custom]`.
+- **`CATS_RUNS_DIR`** — sets the report output directory for both the CLI default
+  and the MCP server.
+- **Multi-source `.env` loading** — variables now resolve from (in priority
+  order) the real shell environment → `<cwd>/.env` → `~/.cyberagent/.env` →
+  the bundled `.env`. The per-user `~/.cyberagent/.env` is ideal for global
+  installs (survives reinstalls); shell exports always win.
+
+### Changed for 0.22.4
+
+- **MCP server no longer writes inside its own package** — reports now default to
+  `~/.cyberagent/runs` (was `<package>/runs`, which is hidden/possibly read-only
+  for a global install). Override with `CATS_RUNS_DIR`.
+
+### Docs for 0.22.4
+
+- Configuration and MCP-integration guides document all three ways to set
+  variables (shell profile, `~/.cyberagent/.env`, project `.env`), with explicit
+  guidance that GUI MCP clients don't read `~/.zshrc` — use the config `env`
+  block or `~/.cyberagent/.env`. `.env.example` documents the two new vars.
+
 ## [0.22.3] - 2026-06-04
 
 Usability fix for global installs — `cyberagent -p <id>` previously required a

@@ -16,6 +16,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const PLAYBOOKS_DIR = path.join(__dirname, '..', '..', 'playbooks');
 
 /**
+ * Directories scanned for playbooks, in priority order (a later directory wins
+ * on id collision): the bundled playbooks/ first, then an optional user dir from
+ * CATS_PLAYBOOKS_DIR. This lets a globally-installed CLI or MCP server expose
+ * custom playbooks without modifying the package — drop .yaml files in the dir
+ * named by CATS_PLAYBOOKS_DIR and they appear alongside the built-ins.
+ */
+export function playbookDirs() {
+  const dirs = [PLAYBOOKS_DIR];
+  if (process.env.CATS_PLAYBOOKS_DIR) dirs.push(path.resolve(process.env.CATS_PLAYBOOKS_DIR));
+  return dirs;
+}
+
+/**
  * Resolve a `-p` / `--playbook` argument to an absolute playbook file path.
  *
  * Accepts either:
@@ -84,65 +97,71 @@ export function toolNameToId(toolSuffix) {
  * }
  */
 export async function loadPlaybooks() {
-  let files;
-  try {
-    files = await fs.readdir(PLAYBOOKS_DIR);
-  } catch {
-    return [];
-  }
-
-  const playbooks = [];
+  // Keyed by id so a user playbook (later dir) overrides a built-in with the
+  // same id. Built-ins are scanned first, user dir second.
+  const byId = new Map();
 
   // Playbooks are .yaml/.yml (pure YAML) or .md (YAML front matter + body, legacy).
   // Files starting with "_" are templates/partials and are skipped.
   const isPlaybook = f =>
     !f.startsWith('_') && (f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.md'));
 
-  for (const file of files.filter(isPlaybook)) {
-    const filepath = path.join(PLAYBOOKS_DIR, file);
+  for (const dir of playbookDirs()) {
+    const builtin = dir === PLAYBOOKS_DIR;
+    let files;
     try {
-      const raw = await fs.readFile(filepath, 'utf8');
-
-      let fm, content = '';
-      if (file.endsWith('.md')) {
-        const parsed = matter(raw, { engines: { yaml: s => yaml.load(s) } });
-        fm = parsed.data;
-        content = parsed.content;
-      } else {
-        fm = yaml.load(raw) || {};
-      }
-
-      // Must have an id and title to be usable as an MCP tool
-      if (!fm.id || !fm.title) continue;
-
-      // Description: explicit `description:` field wins; otherwise (for legacy .md)
-      // fall back to the first non-heading line of the body.
-      const descLine = content
-        .split('\n')
-        .map(l => l.trim())
-        .find(l => l.length > 0 && !l.startsWith('#') && !l.startsWith('```'));
-
-      const description = fm.description || descLine || `Run ${fm.title} checks against a target.`;
-
-      const steps = (fm.steps || []);
-      const executors = [...new Set(steps.map(s => s.uses).filter(Boolean))];
-
-      playbooks.push({
-        id: fm.id,
-        title: fm.title,
-        description: description.replace(/\{\{[^}]+\}\}/g, '<target>'), // clean template vars
-        file: filepath,
-        filename: file,
-        toolName: idToToolName(fm.id),
-        defaultVars: fm.vars || {},
-        stepCount: steps.length,
-        steps: steps.map(s => s.name).filter(Boolean),
-        executors,
-      });
+      files = await fs.readdir(dir);
     } catch {
-      // Skip malformed playbooks silently
+      continue; // missing/unreadable dir (e.g. a mistyped CATS_PLAYBOOKS_DIR) — skip quietly
+    }
+
+    for (const file of files.filter(isPlaybook)) {
+      const filepath = path.join(dir, file);
+      try {
+        const raw = await fs.readFile(filepath, 'utf8');
+
+        let fm, content = '';
+        if (file.endsWith('.md')) {
+          const parsed = matter(raw, { engines: { yaml: s => yaml.load(s) } });
+          fm = parsed.data;
+          content = parsed.content;
+        } else {
+          fm = yaml.load(raw) || {};
+        }
+
+        // Must have an id and title to be usable as an MCP tool
+        if (!fm.id || !fm.title) continue;
+
+        // Description: explicit `description:` field wins; otherwise (for legacy .md)
+        // fall back to the first non-heading line of the body.
+        const descLine = content
+          .split('\n')
+          .map(l => l.trim())
+          .find(l => l.length > 0 && !l.startsWith('#') && !l.startsWith('```'));
+
+        const description = fm.description || descLine || `Run ${fm.title} checks against a target.`;
+
+        const steps = (fm.steps || []);
+        const executors = [...new Set(steps.map(s => s.uses).filter(Boolean))];
+
+        byId.set(fm.id, {
+          id: fm.id,
+          title: fm.title,
+          description: description.replace(/\{\{[^}]+\}\}/g, '<target>'), // clean template vars
+          file: filepath,
+          filename: file,
+          builtin,
+          toolName: idToToolName(fm.id),
+          defaultVars: fm.vars || {},
+          stepCount: steps.length,
+          steps: steps.map(s => s.name).filter(Boolean),
+          executors,
+        });
+      } catch {
+        // Skip malformed playbooks silently
+      }
     }
   }
 
-  return playbooks.sort((a, b) => a.title.localeCompare(b.title));
+  return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title));
 }

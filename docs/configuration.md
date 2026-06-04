@@ -55,11 +55,19 @@ Timeouts are resolved in this order (first match wins):
 
 ## Output directory
 
-Reports are saved to `./runs/` by default. The directory is created automatically if it does not exist.
+The directory is created automatically if it does not exist. Resolution order:
+
+1. **`--out <dir>`** flag (CLI, per-invocation) — highest priority.
+2. **`CATS_RUNS_DIR`** env var — applies to the CLI default *and* the MCP server.
+3. Default: **`./runs/`** for the CLI (relative to cwd), and **`~/.cyberagent/runs`**
+   for the MCP server (so a global server never writes inside its own package dir).
 
 ```bash
-# Save to a custom directory
-node src/index.js -p playbooks/quick-web-recon.yaml --target example.com --out ./reports/q1
+# Save to a custom directory (one run)
+cyberagent -p quick-web-recon --target example.com --out ./reports/q1
+
+# Set a default for every run (CLI + MCP)
+export CATS_RUNS_DIR="$HOME/recon/runs"
 ```
 
 Filenames are timestamped:
@@ -75,11 +83,62 @@ The `runs/` directory is gitignored — reports are never committed to source co
 
 ## Environment variables
 
-Copy `.env.example` to `.env` in the project root (it is gitignored). The `.env`
-file is **loaded automatically** at startup — by both the CLI and the MCP server,
-and for both built-in and npm-installed extensions — so keys work out of the box.
-Real shell environment variables always take precedence over `.env`. Everything is
-optional; the tool runs fully keyless.
+Everything is optional — the tool runs fully keyless. Keys only enable extra
+enrichment (Shodan, VirusTotal, …) or notifications.
+
+### How to set them
+
+CATS reads variables from several sources at startup, in priority order (a value
+already set is **never** overwritten, so the first source to define a key wins):
+
+| Priority | Source | Best for |
+| -------- | ------ | -------- |
+| 1 (highest) | **Real shell environment** — `export` in `~/.zshrc` / `~/.bashrc` | CLI usage; persists across sessions |
+| 2 | **`<cwd>/.env`** — a `.env` in the directory you run from | Source checkouts / per-project keys |
+| 3 | **`~/.cyberagent/.env`** — a per-user file | **Global installs** (survives `npm` reinstalls) |
+| 4 (lowest) | **`<package>/.env`** — bundled file | Dev convenience |
+
+**Option A — shell profile (recommended for the CLI).** Add exports to your shell
+rc file so every terminal session has them:
+
+```bash
+# ~/.zshrc  or  ~/.bashrc
+export SHODAN_API_KEY="your_key_here"
+export VIRUSTOTAL_API_KEY="your_key_here"
+export CATS_PLAYBOOKS_DIR="$HOME/recon/playbooks"
+export CATS_RUNS_DIR="$HOME/recon/runs"
+```
+
+Then reload: `source ~/.zshrc` (or open a new terminal). Verify with
+`echo $SHODAN_API_KEY`.
+
+> **MCP note:** GUI apps like Claude Desktop do **not** read `~/.zshrc`, so shell
+> exports won't reach a GUI-launched MCP server. For the MCP server use
+> `~/.cyberagent/.env` (Option B) or the `env` block in the client config — see
+> [MCP Integration](mcp-integration.md#environment-variables-api-keys).
+
+**Option B — a per-user `.env` (recommended for global installs & MCP).** Create
+`~/.cyberagent/.env` once; it's loaded no matter where CATS runs from and it
+survives `npm install -g` upgrades:
+
+```bash
+mkdir -p ~/.cyberagent
+cat > ~/.cyberagent/.env <<'EOF'
+SHODAN_API_KEY=your_key_here
+VIRUSTOTAL_API_KEY=your_key_here
+CATS_PLAYBOOKS_DIR=/Users/me/recon/playbooks
+CATS_RUNS_DIR=/Users/me/recon/runs
+EOF
+```
+
+**Option C — a project `.env` (source checkouts).** Copy `.env.example` to `.env`
+in the repo root (it is gitignored):
+
+```bash
+cp .env.example .env   # then edit
+```
+
+### Reference
 
 ```bash
 # .env
@@ -100,6 +159,10 @@ VIRUSTOTAL_API_KEY=your_key_here         # virustotal.lookup (no-op without it)
 BINARYEDGE_API_KEY=your_key_here         # binaryedge.host (no-op without it)
 INTELX_API_KEY=your_key_here             # intelx.search (no-op without it)
 CHROME_PATH=                             # web.screenshot — override Chrome/Chromium path
+
+# ── Paths (great for global installs / MCP) ──
+CATS_PLAYBOOKS_DIR=/path/to/my/playbooks # extra .yaml playbooks, merged with built-ins
+CATS_RUNS_DIR=/path/to/reports           # where reports go (default: ~/.cyberagent/runs)
 
 # ── Runtime behaviour ──
 CATS_TOOL_MODE=full                      # "lean" hides per-executor MCP tools (82 → 22)

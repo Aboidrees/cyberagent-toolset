@@ -112,7 +112,7 @@ await yargs(hideBin(process.argv))
       .option('p', { alias: 'playbook', type: 'string', demandOption: true, describe: 'Playbook id (e.g. quick-web-recon) or path to a .yaml/.md file' })
       .option('target', { alias: 't', type: 'string', describe: 'Recon target (shorthand for --var target=<value>)' })
       .option('var', { type: 'array', describe: 'Override playbook vars, e.g. --var scheme=http' })
-      .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
+      .option('out', { type: 'string', default: process.env.CATS_RUNS_DIR || './runs', describe: 'Output directory for reports (defaults to $CATS_RUNS_DIR or ./runs)' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors (no packets to the host)' })
       .example('$0 -p quick-web-recon --target fortmind.qa', 'Run a bundled playbook by id')
@@ -144,7 +144,7 @@ await yargs(hideBin(process.argv))
       .option('target', { alias: 't', type: 'string', demandOption: true, describe: 'Target (domain / IP / CIDR / URL)' })
       .option('phase', { type: 'string', default: 'reconnaissance', choices: ['reconnaissance', 'scanning', 'gaining-access', 'all'], describe: 'Which phase(s) to run' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: skip active executors' })
-      .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
+      .option('out', { type: 'string', default: process.env.CATS_RUNS_DIR || './runs', describe: 'Output directory for reports (defaults to $CATS_RUNS_DIR or ./runs)' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
       .example('$0 auto --target example.com', 'Run all applicable reconnaissance')
       .example('$0 auto --target 192.0.2.0/24 --phase all', 'All applicable executors for a CIDR'),
@@ -198,7 +198,7 @@ await yargs(hideBin(process.argv))
     'Run a watchlist of targets and playbooks from a YAML file',
     y => y
       .option('list', { type: 'string', demandOption: true, describe: 'Path to a watchlist YAML (e.g. watchlists/example.yaml)' })
-      .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
+      .option('out', { type: 'string', default: process.env.CATS_RUNS_DIR || './runs', describe: 'Output directory for reports (defaults to $CATS_RUNS_DIR or ./runs)' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' }),
     wrap(async argv => {
       const res = await runWatchlist({
@@ -223,7 +223,7 @@ await yargs(hideBin(process.argv))
       .option('assess', { type: 'string', describe: 'Target to assess on each tick (assessment mode — dynamic/pivot-driven)' })
       .option('target', { type: 'string', describe: 'Target host/IP (required in playbook mode)' })
       .option('cron', { type: 'string', demandOption: true, describe: 'Cron expression, e.g. "0 8 * * 1"' })
-      .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
+      .option('out', { type: 'string', default: process.env.CATS_RUNS_DIR || './runs', describe: 'Output directory for reports (defaults to $CATS_RUNS_DIR or ./runs)' })
       .option('now', { type: 'boolean', default: false, describe: 'Run once immediately, then on schedule' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only (assessment mode)' })
       .option('top', { type: 'number', default: 5, describe: 'Suggestions to run per round (assessment mode)' })
@@ -284,9 +284,10 @@ await yargs(hideBin(process.argv))
         console.log(JSON.stringify(all, null, 2));
         return;
       }
-      console.log(`CyberAgentToolSet (CATS) — ${all.length} playbooks\n`);
+      const customCount = all.filter(p => !p.builtin).length;
+      console.log(`CyberAgentToolSet (CATS) — ${all.length} playbooks${customCount ? ` (${customCount} custom from $CATS_PLAYBOOKS_DIR)` : ''}\n`);
       for (const p of all) {
-        console.log(`${p.id}  —  ${p.title}  (${p.stepCount} steps)`);
+        console.log(`${p.id}  —  ${p.title}  (${p.stepCount} steps)${p.builtin ? '' : '  [custom]'}`);
         if (p.description) console.log(`  ${p.description}`);
         if (p.executors?.length) console.log(`  executors: ${p.executors.join(', ')}`);
         if (p.defaultVars && Object.keys(p.defaultVars).length) {

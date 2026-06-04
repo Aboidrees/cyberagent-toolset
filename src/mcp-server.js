@@ -36,7 +36,7 @@ import { readFileSync } from 'fs';
 
 import { loadCatalog }   from './extensions/loader.js';
 import { runPlaybook }   from './runner.js';
-import { ensureDir }     from './utils/fsx.js';
+import { ensureDir, defaultRunsDir } from './utils/fsx.js';
 import { loadPlaybooks } from './utils/playbooks.js';
 import {
   createAssessment, runStep, saveAssessment, loadAssessment, preflightTarget,
@@ -50,7 +50,7 @@ const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Single source of truth — read from package.json so the banner never drifts.
 const VERSION = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version;
-const RUNS_DIR  = path.join(__dirname, '..', 'runs');
+const RUNS_DIR  = defaultRunsDir();
 
 const usesToTool = (uses) => `${PREFIX}_${uses.replace(/[^a-zA-Z0-9]/g, '_')}`;
 

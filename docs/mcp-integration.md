@@ -35,22 +35,72 @@ realpath src/mcp-server.js
 
 ### 2. Add the server to Claude Desktop config
 
-Open (or create) `~/.claude/claude_desktop_config.json`:
+Open (or create) `~/.claude/claude_desktop_config.json`.
+
+**If installed globally** (`npm install -g cyberagent-toolset`), use the
+`cyberagent-mcp` command — no path needed:
+
+```json
+{
+  "mcpServers": {
+    "recon": {
+      "command": "cyberagent-mcp"
+    }
+  }
+}
+```
+
+**From a source checkout**, point `node` at the absolute path:
 
 ```json
 {
   "mcpServers": {
     "recon": {
       "command": "node",
-      "args": [
-        "/Users/yourname/development/cyberagent-toolset/src/mcp-server.js"
-      ]
+      "args": ["/Users/yourname/development/cyberagent-toolset/src/mcp-server.js"]
     }
   }
 }
 ```
 
-Replace the path with your actual absolute path.
+> If `cyberagent-mcp` isn't found (GUI apps don't always inherit your shell
+> `PATH`), use the absolute path from `which cyberagent-mcp`, or
+> `"command": "npx", "args": ["-y", "cyberagent-toolset", "cyberagent-mcp"]`.
+
+### Environment variables (API keys)
+
+**Important:** Claude Desktop (a GUI app) does **not** read your `~/.zshrc` /
+`~/.bashrc`, so `export`ed keys won't reach the MCP server. Use either of these:
+
+**Option A — `env` block in the config** (explicit, self-contained):
+
+```json
+{
+  "mcpServers": {
+    "recon": {
+      "command": "cyberagent-mcp",
+      "env": {
+        "SHODAN_API_KEY": "your_key_here",
+        "VIRUSTOTAL_API_KEY": "your_key_here",
+        "CATS_PLAYBOOKS_DIR": "/Users/me/recon/playbooks",
+        "CATS_RUNS_DIR": "/Users/me/recon/runs"
+      }
+    }
+  }
+}
+```
+
+**Option B — a per-user `~/.cyberagent/.env`** (keeps secrets out of the config
+file; loaded automatically regardless of launch directory):
+
+```bash
+mkdir -p ~/.cyberagent
+printf 'SHODAN_API_KEY=your_key_here\nCATS_PLAYBOOKS_DIR=/Users/me/recon/playbooks\n' >> ~/.cyberagent/.env
+```
+
+See [Configuration → Environment variables](configuration.md#environment-variables)
+for the full precedence rules and key list. All keys are optional — the server
+runs fully keyless.
 
 ### 3. Restart Claude Desktop
 
@@ -199,11 +249,19 @@ stay front-and-center.
 
 ## Adding a new playbook
 
-1. Drop a `.yaml` file into `playbooks/` following the [playbook format](playbooks.md).
-2. Make sure it has an `id`, `title`, and `description`.
-3. Restart Claude Desktop.
+**From a source checkout:** drop a `.yaml` file into `playbooks/`.
 
-The new playbook automatically appears as a tool (`cats_play__<id>`) and in the `cats_topics` list — no code changes needed.
+**With a global install:** you can't edit the bundled `playbooks/` dir (it lives
+inside the package), so point `CATS_PLAYBOOKS_DIR` at your own directory and put
+`.yaml` files there. Set it in the server's `env` block (see
+[Environment variables](#environment-variables-api-keys)) or `~/.cyberagent/.env`.
+
+In both cases:
+
+1. The file must have an `id`, `title`, and `description` ([playbook format](playbooks.md)).
+2. Restart Claude Desktop.
+
+The new playbook automatically appears as a tool (`cats_play__<id>`) and in the `cats_topics` list — no code changes needed. A custom playbook whose `id` matches a built-in overrides it.
 
 ---
 
@@ -213,7 +271,7 @@ The new playbook automatically appears as a tool (`cats_play__<id>`) and in the 
 npm run mcp
 # stderr output:
 # Loaded 26 extensions (64 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.22.0 ready — 86 tools, 4 prompts, resources on
+# CyberAgentToolSet (CATS) v0.22.3 ready — 86 tools, 4 prompts, resources on
 
 # Send a raw tools/list request
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node src/mcp-server.js 2>/dev/null
