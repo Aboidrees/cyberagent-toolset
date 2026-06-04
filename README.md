@@ -93,7 +93,9 @@ node src/index.js assess start example.com --full      # one command: drive the 
 node src/index.js assess start example.com          # or step through it: id + ranked next steps
 node src/index.js assess run  <id> --top 5           # run the top suggestions; new pivots surface
 node src/index.js assess next <id>                   # see the updated ranked actions
-node src/index.js assess report <id>                 # prioritized, correlated report
+node src/index.js assess report <id>                 # prioritized, correlated report (Markdown/JSON)
+node src/index.js assess report <id> --format pdf   # export PDF/DOCX/HTML (like a run)
+node src/index.js assess diff <idA> <idB>            # compare a target over time
 ```
 
 Over MCP the same loop is `cats_assess_start → cats_assess_run → cats_assess_next
