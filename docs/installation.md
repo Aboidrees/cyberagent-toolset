@@ -80,7 +80,7 @@ node src/index.js --help
 npm run mcp
 # Expected output:
 # Loaded 22 extensions (60 executors), 13 playbooks
-# CyberAgentToolSet (CATS) v0.16.0 ready — 82 tools, 4 prompts, resources on
+# CyberAgentToolSet (CATS) v0.21.0 ready — 82 tools, 4 prompts, resources on
 ```
 
 Press `Ctrl+C` to stop the MCP server.

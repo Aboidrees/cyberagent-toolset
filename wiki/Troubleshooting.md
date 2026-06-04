@@ -4,7 +4,7 @@
 
 - The path in `claude_desktop_config.json` must be **absolute**.
 - Run `node /your/path/src/mcp-server.js` manually — it should print
-  `CyberAgentToolSet (CATS) v0.16.0 ready — 82 tools, 4 prompts, resources on`.
+  `CyberAgentToolSet (CATS) v0.21.0 ready — 82 tools, 4 prompts, resources on`.
 - Check Claude logs: `~/Library/Logs/Claude/` (macOS).
 
 ## A key-gated executor returns a "skipped" note

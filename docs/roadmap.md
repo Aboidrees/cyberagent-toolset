@@ -4,7 +4,7 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.18.0
+## Current state — v0.21.0
 
 | Area | Status |
 | ------ | -------- |
@@ -33,14 +33,14 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 ## Next up — candidate backlog
 
 **The strategy: lean into the MCP/agent angle.** CATS's defensible value over a
-bare scanner like Nuclei (which it *wraps*, as one of 56 executors) is being the
-agent-driven orchestration layer. Phase 9 landed the keystone (assessments +
-pivots). Remaining moves, in that spirit:
+bare scanner like Nuclei (which it *wraps*, as one of 60 executors) is being the
+agent-driven orchestration layer — assessments, pivots, the dashboard, both eval
+drivers, and `assess --full`/export/diff are all shipped. Remaining moves:
 
-- **LLM-in-the-loop evals (scored)** — Phase 12 shipped the framework + heuristic baseline (`npm run eval:llm`); wire a live agent (API key) and a sharper judge.
-- **More tools** — service probes (LDAP, RDP, MySQL/Postgres banner), more cloud providers, screenshot-into-report embedding; more key-gated providers.
+- **Sharper LLM-in-the-loop judge** — the `eval:llm` framework + both agent drivers (Claude Code + API) ship; add golden expectations per target and more scoring dimensions.
+- **Schedule + notify for assessments** — assessments can export/diff like runs; add cron + webhook/Slack on completion for full parity.
+- **More key-gated intel** — GreyNoise / VirusTotal / BinaryEdge / IntelX, via the no-op-without-key pattern.
 - **Ecosystem** — publish `cyberagent-toolset` + a reference `cyberagent-ext-*` to npm (package is publish-ready: run `npm publish`).
-- **Bigger features** — local web dashboard for browsing/diffing runs; authentication-aware scanning.
 
 > **Explicitly out of scope, by design:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`).
 

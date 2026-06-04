@@ -18,8 +18,12 @@ A scenario-driven walkthrough of CyberAgentToolSet (CATS). For deep reference se
 - **Extension** — a domain module (dns, web, tls, cloud, …) that ships one or more
   executors. Local `extensions/` load out of the box; npm `cyberagent-ext-*`
   packages auto-register.
-- **Playbook** — a YAML workflow (`playbooks/*.yaml`) that runs a list of executor
-  steps against a target and saves a report.
+- **Playbook** — a *fixed* YAML workflow (`playbooks/*.yaml`) that runs a set list
+  of executor steps against a target and saves a report.
+- **Assessment** — a *dynamic*, stateful investigation: it discovers entities and
+  pivots onto them (subdomain → web sweep, open port → service probe, CVE → EPSS),
+  then synthesizes a prioritized report. Run with `assess start <t> --full`. Both
+  playbooks and assessments are first-class — pick the one that fits.
 - **Phase / posture** — every executor is tagged `reconnaissance | scanning |
   gaining-access` and `passive | active`. List everything with the MCP
   `cats_capabilities` tool.
@@ -85,6 +89,52 @@ domain).
 
 ---
 
+## Scenario 1c — A full assessment (the agent-driven way)
+
+An **assessment** is the smart alternative to a fixed playbook: it discovers
+entities (subdomains, IPs, ports, URLs, CVEs) and *pivots* onto them — a found
+subdomain triggers a web/TLS sweep on it, an open `445` triggers `smb.probe`, a
+discovered CVE triggers `vuln.epss`. `--full` drives the whole loop in one command.
+
+```bash
+node src/index.js assess start example.com --full           # full active assessment → report
+node src/index.js assess start example.com --full --passive # OSINT-only (no packets to the host)
+```
+
+Step through it manually instead, if you prefer:
+
+```bash
+node src/index.js assess start example.com        # → assessment id + ranked next actions
+node src/index.js assess run  <id> --top 5        # run the top suggestions; new pivots surface
+node src/index.js assess next <id>                # see the updated ranked actions
+node src/index.js assess report <id>              # prioritized report (top risks, entities, coverage)
+```
+
+The report correlates findings (CVE × EPSS exploit-probability). Export and diff it
+like a run:
+
+```bash
+node src/index.js assess report <id> --format pdf --out report.pdf --company "Acme"
+node src/index.js assess diff <idA> <idB>         # compare a target over time (exits non-zero on change)
+```
+
+**Assessment vs run:** a *run* executes a fixed playbook; an *assessment* decides
+what to run next from what it finds. Both produce reports you can export and diff —
+keep whichever fits the job.
+
+---
+
+## Scenario 1d — The web dashboard
+
+A local browser UI to browse assessments and runs, drive an assessment, and diff
+runs. Localhost-bound (it can trigger active scans), no extra dependency:
+
+```bash
+node src/index.js dashboard            # → http://127.0.0.1:7878
+```
+
+---
+
 ## Scenario 2 — API keys (Shodan, NVD, AbuseIPDB)
 
 Everything runs keyless. Keys only add enrichment. Copy `.env.example` to `.env`
@@ -144,8 +194,10 @@ Add the server to Claude Desktop (`~/.claude/claude_desktop_config.json`):
 ```
 
 Then ask Claude to "list capabilities" (`cats_capabilities`), "list recon topics"
-(`cats_topics`), or "run the web headers assessment on example.com". Every executor
-is also a direct tool (`cats_<uses>`, e.g. `cats_http_security_score`). Full setup:
+(`cats_topics`), or **"assess example.com"** — Claude drives the stateful loop via
+`cats_assess_start → cats_assess_run → cats_assess_report` (or use the one-click
+`assess-domain` prompt). Every executor is also a direct tool (`cats_<uses>`, e.g.
+`cats_http_security_score`). Full setup:
 [MCP Integration](mcp-integration.md).
 
 ---
@@ -201,11 +253,16 @@ and [Architecture](architecture.md).
 | ------- | ------- |
 | `cyberagent -p <playbook.yaml> --target <host>` | Run a playbook (default) |
 | `cyberagent auto --target <host>` | Auto-run every applicable executor |
+| `cyberagent assess start <host> --full` | Full pivot-driven assessment → report |
+| `cyberagent assess report <id> --format pdf` | Export an assessment (pdf/docx/html) |
+| `cyberagent assess diff <idA> <idB>` | Compare a target's assessments over time |
+| `cyberagent dashboard` | Local web UI (browse / drive / diff) |
 | `cyberagent capabilities` | List executors by phase / posture / domain |
+| `cyberagent permissions` | Show each extension's declared permissions |
 | `cyberagent diff <a.json> <b.json>` | Diff two runs |
 | `cyberagent watch --list <watchlist.yaml>` | Batch targets × playbooks |
 | `cyberagent schedule --playbook <id> --target <host> --cron "<expr>"` | Recurring scan |
-| `cyberagent report <run.json> --format pdf\|docx\|html` | Export a report |
+| `cyberagent report <run.json> --format pdf\|docx\|html` | Export a run report |
 
 (`node src/index.js …` works identically; `cyberagent` is the installed bin name.)
 
