@@ -29,9 +29,21 @@ import { getPrompt } from '../src/mcp-prompts.js';
 
 const pexec = promisify(execFile);
 
-const TARGET = process.argv.find((a, i) => i >= 2 && !a.startsWith('--')) || 'example.com';
 const AGENT = (process.argv.includes('--agent') ? process.argv[process.argv.indexOf('--agent') + 1] : process.env.EVAL_AGENT) || 'heuristic';
 const POSTURE = 'passive';
+
+// Require an explicit target — don't silently assess a default (that hides typos
+// and runs against the wrong host). The first positional that isn't a flag or the
+// value of --agent is the target.
+const agentValueIdx = process.argv.indexOf('--agent') + 1;
+const TARGET = process.argv.find((a, i) => i >= 2 && !a.startsWith('--') && i !== agentValueIdx);
+if (!TARGET) {
+  console.error('Usage: node scripts/eval-llm.mjs <target> [--agent heuristic|api|claude-code]\n' +
+    '  e.g. node scripts/eval-llm.mjs example.com --agent claude-code\n\n' +
+    'Provide an authorized target — there is no default. Targets with a golden\n' +
+    'spec in this file (example.com, fortmind.qa) also get target-specific scoring.');
+  process.exit(2);
+}
 
 const catalog = await loadCatalog();
 
