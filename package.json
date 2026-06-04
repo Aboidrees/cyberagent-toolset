@@ -17,8 +17,8 @@
     "node": ">=18.0.0"
   },
   "bin": {
-    "cyberagent": "./src/index.js",
-    "cyberagent-mcp": "./src/mcp-server.js"
+    "cyberagent": "src/index.js",
+    "cyberagent-mcp": "src/mcp-server.js"
   },
   "imports": {
     "#sdk": "./src/sdk.js"
@@ -30,10 +30,12 @@
     "watchlists",
     "schemas",
     "templates",
+    "docs",
     ".env.example",
     "LICENSE",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "about.md"
   ],
   "publishConfig": {
     "access": "public"

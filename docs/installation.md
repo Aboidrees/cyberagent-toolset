@@ -57,9 +57,27 @@ Pre-installed on all platforms. No action needed.
 
 ## Install CyberAgentToolSet (CATS)
 
+### Option A — from npm (recommended)
+
+```bash
+# Global install — exposes the `cyberagent` and `cyberagent-mcp` commands
+npm install -g cyberagent-toolset
+
+# Verify
+cyberagent --help
+```
+
+Or run it without installing:
+
+```bash
+npx cyberagent-toolset --help
+```
+
+### Option B — from source (for development)
+
 ```bash
 # Clone
-git clone https://github.com/yourusername/cyberagent-toolset.git
+git clone https://github.com/Aboidrees/cyberagent-toolset.git
 cd cyberagent-toolset
 
 # Install Node dependencies
@@ -73,11 +91,11 @@ That's it. No build step required — the project runs directly as ES modules.
 ## Verify the installation
 
 ```bash
-# Check the CLI works
-node src/index.js --help
+# Check the CLI works (use `cyberagent` if installed from npm, or `node src/index.js` from source)
+cyberagent --help
 
 # Check the MCP server starts
-npm run mcp
+cyberagent-mcp   # (from source: npm run mcp)
 # Expected output:
 # Loaded 26 extensions (64 executors), 13 playbooks
 # CyberAgentToolSet (CATS) v0.22.0 ready — 86 tools, 4 prompts, resources on

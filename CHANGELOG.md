@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.22.1] - 2026-06-04
+
+Documentation-packaging patch — the first npm release (`0.22.0`) shipped without
+the `docs/` tree, so README documentation links resolved only on npmjs.com (via
+GitHub link-rewriting) and were dead for anyone reading the installed package.
+
+### Fixed for 0.22.1
+
+- **Ship `docs/` and `about.md` in the npm tarball** — added them to
+  `package.json` `files[]`; the full 11-doc set now installs with the package
+  (tarball 121 → 133 files).
+- **Real repository URL** — replaced the `yourusername` placeholder in the clone
+  command (README + `docs/installation.md`).
+- **npm-first install instructions** — README quick start and installation guide
+  now lead with `npm install -g cyberagent-toolset` and the `cyberagent` /
+  `cyberagent-mcp` binaries, with from-source as the secondary path.
+- **Cleaned `bin` entries** — `npm pkg fix` removed the `./` prefixes npm warned
+  about on publish.
+
+### Changed for 0.22.1
+
+- **`eval:llm` requires an explicit target** — the harness no longer silently
+  defaults to `example.com`; it prints usage and exits non-zero when no
+  authorized target is given.
+
 ## [0.22.0] - 2026-06-04
 
 Phase 19 — scheduled assessments + intelligence-provider expansion + a sharper

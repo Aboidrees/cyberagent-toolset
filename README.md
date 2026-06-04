@@ -35,16 +35,23 @@ When the MCP server is running, Claude can drive the entire workflow interactive
 ## Quick start
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/yourusername/cyberagent-toolset.git
-cd cyberagent-toolset
-npm install
+# 1. Install from npm (exposes `cyberagent` and `cyberagent-mcp`)
+npm install -g cyberagent-toolset
 
 # 2. Run a quick recon
-node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
+cyberagent -p quick-web-recon --target example.com
 
 # 3. Or start the MCP server for Claude
-npm run mcp
+cyberagent-mcp
+```
+
+Prefer to run from source? Clone the repo, `npm install`, then use
+`node src/index.js …` in place of `cyberagent` (and `npm run mcp` for the server):
+
+```bash
+git clone https://github.com/Aboidrees/cyberagent-toolset.git
+cd cyberagent-toolset && npm install
+node src/index.js -p playbooks/quick-web-recon.yaml --target example.com
 ```
 
 Reports are saved to `runs/` as `.json` and `.md`.
