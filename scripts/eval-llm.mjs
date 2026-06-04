@@ -17,10 +17,17 @@
  * Usage: node scripts/eval-llm.mjs [target] [--agent heuristic|llm]
  */
 
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadCatalog } from '../src/extensions/loader.js';
-import { createAssessment, runStep, preflightTarget, loadAssessment, saveAssessment } from '../src/assessment.js';
+import { createAssessment, runStep, preflightTarget, loadAssessment, saveAssessment, listAssessments } from '../src/assessment.js';
 import { suggest } from '../src/pivots.js';
 import { synthesize } from '../src/assessment-report.js';
+import { getPrompt } from '../src/mcp-prompts.js';
+
+const pexec = promisify(execFile);
 
 const TARGET = process.argv.find((a, i) => i >= 2 && !a.startsWith('--')) || 'example.com';
 const AGENT = (process.argv.includes('--agent') ? process.argv[process.argv.indexOf('--agent') + 1] : process.env.EVAL_AGENT) || 'heuristic';
@@ -62,7 +69,9 @@ async function heuristicAgent(target) {
   return { assessmentId };
 }
 
-async function llmAgent(target) {
+// API agent — drives the loop with the Anthropic API (needs ANTHROPIC_API_KEY +
+// @anthropic-ai/sdk). Billed via the Anthropic Console (separate from Claude Max).
+async function apiAgent(target) {
   let Anthropic;
   try { ({ default: Anthropic } = await import('@anthropic-ai/sdk')); } catch { return null; }
   if (!process.env.ANTHROPIC_API_KEY) return null;
@@ -101,6 +110,37 @@ async function llmAgent(target) {
   return { assessmentId };
 }
 
+// Claude Code agent — drives the loop through the `claude` CLI in headless mode,
+// connected to the CATS MCP server. Uses your Claude Code auth (a Claude Max
+// subscription via OAuth, or ANTHROPIC_API_KEY) — no separate API key required.
+// The MCP server persists assessments to runs/assessments/, so we read the one
+// it created back off disk and score it.
+async function claudeCodeAgent(target) {
+  try { await pexec('claude', ['--version'], { timeout: 10000 }); } catch { return null; } // CLI not installed
+
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const mcpConfig = JSON.stringify({ mcpServers: { cats: { command: 'node', args: [path.join(root, 'src', 'mcp-server.js')] } } });
+  const allow = ['cats_assess_start', 'cats_assess_run', 'cats_assess_next', 'cats_assess_report']
+    .map(t => `mcp__cats__${t}`).join(',');
+  const prompt = getPrompt('assess-domain', { target, passive: 'true' }).messages[0].content.text;
+
+  const before = new Set((await listAssessments()).map(a => a.id));
+  try {
+    await pexec('claude', [
+      '-p', prompt,
+      '--output-format', 'json',
+      '--mcp-config', mcpConfig,
+      '--strict-mcp-config',
+      '--allowedTools', allow,
+    ], { timeout: 300000, maxBuffer: 32 * 1024 * 1024 });
+  } catch (e) {
+    // claude may exit non-zero; the assessment may still have been produced.
+    if (!e.stdout) return { error: `claude CLI failed: ${e.message}` };
+  }
+  const created = (await listAssessments()).find(a => !before.has(a.id) && a.target === target);
+  return created ? { assessmentId: created.id } : { error: 'no assessment was produced by the claude-code run' };
+}
+
 // ── Judge: score the resulting assessment (0–100) ─────────────────────────────
 function judge(report) {
   const breakdown = {};
@@ -118,26 +158,32 @@ function judge(report) {
 // ── Run ────────────────────────────────────────────────────────────────────────
 console.log(`\nLLM-in-the-loop eval — target: ${TARGET}, agent: ${AGENT}\n`);
 
-let driver = heuristicAgent;
-if (AGENT === 'llm') {
-  const probe = await llmAgent(TARGET).catch(() => null);
-  if (probe === null) {
-    console.log('ℹ llm agent unavailable (needs ANTHROPIC_API_KEY + `npm i @anthropic-ai/sdk`) — using heuristic baseline.\n');
-  } else {
-    // already ran; judge it
-    if (probe.skipped) { console.log(`SKIP — target unresolvable (${probe.skipped}).`); process.exit(0); }
-    const report = await tools.report(probe.assessmentId);
-    const { score, breakdown } = judge(report);
-    printScore('llm', score, breakdown, report);
-    process.exit(score >= 50 ? 0 : 1);
+const UNAVAILABLE = {
+  api: 'needs ANTHROPIC_API_KEY + `npm i @anthropic-ai/sdk` (Anthropic Console billing)',
+  'claude-code': 'needs the `claude` CLI on PATH (Claude Code / Max subscription)',
+};
+const AGENTS = { heuristic: heuristicAgent, api: apiAgent, llm: apiAgent, 'claude-code': claudeCodeAgent };
+
+const driver = AGENTS[AGENT];
+if (!driver) { console.error(`Unknown agent "${AGENT}". Use: heuristic | api | claude-code`); process.exit(2); }
+
+let usedAgent = AGENT === 'llm' ? 'api' : AGENT;
+let outcome = await driver(TARGET).catch(e => ({ error: e.message }));
+
+// Graceful fallback to the heuristic baseline when a real agent isn't available.
+if (!outcome || outcome.error || outcome === null) {
+  if (AGENT !== 'heuristic') {
+    const why = outcome?.error || UNAVAILABLE[usedAgent] || 'unavailable';
+    console.log(`ℹ ${usedAgent} agent unavailable (${why}) — using heuristic baseline.\n`);
+    usedAgent = 'heuristic (fallback)';
+    outcome = await heuristicAgent(TARGET);
   }
 }
 
-const outcome = await driver(TARGET);
 if (outcome.skipped) { console.log(`SKIP — target unresolvable (${outcome.skipped}).`); process.exit(0); }
 const report = await tools.report(outcome.assessmentId);
 const { score, breakdown } = judge(report);
-printScore(AGENT === 'llm' ? 'heuristic (fallback)' : 'heuristic', score, breakdown, report);
+printScore(usedAgent, score, breakdown, report);
 process.exit(score >= 50 ? 0 : 1);
 
 function printScore(agent, score, breakdown, report) {

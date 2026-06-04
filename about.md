@@ -4,7 +4,7 @@
 
 CyberAgentToolSet (CATS) — formerly `mcp-recon-runner` — is an MCP server **and** CLI that orchestrates **authorized** security assessments across the attack lifecycle. Capabilities ship as installable **extensions** (domain modules), the core is a small **engine + catalog**, and everything is driven by YAML playbooks and the Model Context Protocol so Claude (or any MCP client) can run it conversationally.
 
-- **Version:** v0.18.0
+- **Version:** v0.19.0
 - **Scale:** 60 executors across 22 extensions → 82 MCP tools (full mode) + MCP resources & prompts; a lean tool mode trims to 22
 - **Agent-driven:** stateful **assessments** let an AI agent run a full investigation — start → run → (entities discovered → new pivots) → prioritized report.
 - **Repo:** [github.com/Aboidrees/cyberagent-toolset](https://github.com/Aboidrees/cyberagent-toolset) (public)
@@ -40,6 +40,7 @@ It started at ~v0.3.0 with ~9 core executors (DNS, WHOIS, nmap, HTTP, TLS, subdo
 | Phase 12 — Backlog completion | 0.16.0 | +4 service probes (`mysql`/`postgres`/`rdp`/`ldap`); auth-aware scanning (Bearer/Basic/Cookie on `http.*`); MCP **resource subscriptions** (`resources/updated`); **LLM-in-the-loop eval** framework (`npm run eval:llm`); 60/60 self-test | PR open |
 | Phase 13 — Web dashboard | 0.17.0 | Local browser UI (`cyberagent dashboard`) — browse assessments/runs, drive an assessment (start → run → report), diff runs; Node-`http`, no new dep, localhost-bound | PR open |
 | Phase 14 — Robustness | 0.18.0 | **Unit test suite** (`npm test`, 21 tests, no network) for the binary parsers (SMB/SSH/RDP/LDAP/MySQL/Postgres/SNMP-BER), input validation, entities, pivots, synthesis; wired into CI; tools lower-bound 40→80 | PR open |
+| Phase 15 — LLM eval drivers | 0.19.0 | `eval:llm` drives a real agent two ways: `--agent claude-code` (Claude Code CLI + MCP, Max subscription, no API key) and `--agent api` (Anthropic API). Both score 100/100 on example.com | PR open |
 
 ## 3. Architecture (current)
 
@@ -174,7 +175,7 @@ The project has two test layers: a **unit suite** (`npm test`, 21 tests on `node
 
 **Still ahead (lean further into the agent angle):**
 
-- **LLM-in-the-loop evals (scored)** — the Phase 12 framework runs a heuristic baseline; wire a live agent (your API key) + a sharper judge.
+- ✅ **LLM-in-the-loop evals** — `eval:llm` now drives a real agent via Claude Code (subscription) or the Anthropic API, judged on coverage/discovery/pivoting/report *(v0.19.0)*. A sharper, golden-expectation judge is the remaining refinement.
 - More key-gated intel providers; `npm publish` the package + a reference `cyberagent-ext-*`.
 
 > **Explicitly not on the roadmap:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`) — out of scope by design.

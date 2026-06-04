@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.19.0] - 2026-06-04
+
+Phase 15 — LLM eval drivers. The `eval:llm` harness can now drive the assessment
+with a real agent two ways, in addition to the heuristic baseline.
+
+### Added for 0.19.0
+
+- **`--agent claude-code`** — drives the loop through the `claude` CLI in headless
+  mode, connected to the CATS MCP server (`cats_assess_*` tools). Uses your Claude
+  Code auth (a **Claude Max subscription via OAuth, or `ANTHROPIC_API_KEY`**) — no
+  separate API key required. The MCP server persists the assessment, which the
+  harness reads back and scores.
+- **`--agent api`** — drives the loop with the Anthropic API directly (needs
+  `ANTHROPIC_API_KEY` + `@anthropic-ai/sdk`, billed via the Console). (Was the
+  `--agent llm` path; `llm` stays as an alias.)
+- Clean three-way dispatch (`heuristic` | `api` | `claude-code`) with graceful
+  fallback to the heuristic baseline when a real agent isn't available.
+
+Verified: both `claude-code` and `heuristic` score 100/100 driving a passive
+assessment of example.com; `api` falls back cleanly without a key.
+
 ## [0.18.0] - 2026-06-04
 
 Phase 14 — robustness. A real unit-test suite for the hand-rolled parsers and
