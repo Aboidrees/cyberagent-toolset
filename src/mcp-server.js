@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CyberAgentToolSet (CATS) — Model Context Protocol server  v0.22.0
+ * CyberAgentToolSet (CATS) — Model Context Protocol server
  *
  * Tools are generated dynamically from two sources:
  *   1. The extension catalog — one `cats_<uses>` tool per executor, discovered
@@ -32,6 +32,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 
 import { loadCatalog }   from './extensions/loader.js';
 import { runPlaybook }   from './runner.js';
@@ -45,9 +46,10 @@ import { synthesize }    from './assessment-report.js';
 import { listResources, listResourceTemplates, readResource } from './mcp-resources.js';
 import { PROMPTS, getPrompt } from './mcp-prompts.js';
 
-const VERSION = '0.22.0';
 const PREFIX  = 'cats';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Single source of truth — read from package.json so the banner never drifts.
+const VERSION = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version;
 const RUNS_DIR  = path.join(__dirname, '..', 'runs');
 
 const usesToTool = (uses) => `${PREFIX}_${uses.replace(/[^a-zA-Z0-9]/g, '_')}`;
