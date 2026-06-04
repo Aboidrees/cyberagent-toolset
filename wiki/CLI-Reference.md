@@ -94,6 +94,8 @@ node src/index.js assess run <id> --top 5             # run top suggestions; new
 node src/index.js assess run <id> --uses smb.probe --on 1.2.3.4   # run a specific executor
 node src/index.js assess next <id> [--top 10]         # show ranked next actions
 node src/index.js assess report <id> [--json] [--out report.md]
+node src/index.js assess report <id> --format pdf|docx|html [--out f] [--company X]   # export
+node src/index.js assess diff <idA> <idB> [--json] [--out diff.md]   # compare over time
 node src/index.js assess list                         # all saved assessments
 ```
 

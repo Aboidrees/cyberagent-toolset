@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.21.0] - 2026-06-04
+
+Phase 17 — assessment ↔ run parity. Assessments are now first-class peers of
+playbook runs (both workflows are kept — runs for fixed pipelines, assessments
+for dynamic pivot-driven investigation).
+
+### Added for 0.21.0
+
+- **`assess report <id> --format pdf|docx|html`** — export an assessment to a
+  branded report (`--company`), reusing the same exporters as `run` reports.
+- **`assess diff <idA> <idB>`** — compare two assessments of a target over time:
+  new/resolved findings, new/disappeared entities, severity delta. Exits non-zero
+  on change (for monitoring), like `diff` for runs. `--json` / `--out`.
+
+### Notes
+
+- The pivot engine already chains `tech → vuln.cve_lookup → CVE entities →
+  vuln.epss` and keeps the active web/TLS executors in the seed, so a full active
+  assessment is findings-complete without special-casing — the all-tools self-test
+  only surfaced "more" by *hardcoding* a CVE input.
+
 ## [0.20.0] - 2026-06-04
 
 Phase 16 — one-command full assessment.
