@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.20.0] - 2026-06-04
+
+Phase 16 — one-command full assessment.
+
+### Added for 0.20.0
+
+- **`assess --full`** — drives an assessment to completion in one command, looping
+  the pivot engine (run top-N → discover entities → new pivots → repeat) until it's
+  exhausted or `--max-rounds` (default 12) is hit. Works on `assess start <target>
+  --full` and `assess run <id> --full`. Add `--passive` for OSINT-only scope; drop
+  it for a full active scan.
+
+  ```bash
+  node src/index.js assess start example.com --full            # full active assessment → report
+  node src/index.js assess start example.com --full --passive  # passive (no packets to host)
+  ```
+
+  Assessments are dynamic and pivot-driven — they do **not** use playbooks; the
+  fixed "run every executor once" path is the `all-tools-selftest` playbook or
+  `auto --phase all`.
+
 ## [0.19.0] - 2026-06-04
 
 Phase 15 — LLM eval drivers. The `eval:llm` harness can now drive the assessment

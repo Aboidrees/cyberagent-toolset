@@ -89,7 +89,8 @@ queues `smb.probe`, an unscored CVE queues `vuln.epss`. The final report
 correlates findings (CVE × EPSS exploit-probability) into a prioritized list.
 
 ```bash
-node src/index.js assess start example.com          # → assessment id + ranked next steps
+node src/index.js assess start example.com --full      # one command: drive the whole assessment → report
+node src/index.js assess start example.com          # or step through it: id + ranked next steps
 node src/index.js assess run  <id> --top 5           # run the top suggestions; new pivots surface
 node src/index.js assess next <id>                   # see the updated ranked actions
 node src/index.js assess report <id>                 # prioritized, correlated report

@@ -137,6 +137,7 @@ node src/index.js permissions
 CATS_STRICT_PERMISSIONS=1 node src/index.js auto --target example.com
 
 # Stateful, agent-style assessment (entity graph + pivot engine + report)
+node src/index.js assess start example.com --full        # full assessment in one command
 node src/index.js assess start example.com [--passive]   # → id + ranked next actions
 node src/index.js assess run <id> --top 5                 # run top suggestions; new pivots surface
 node src/index.js assess next <id> [--top 10]             # show ranked next actions

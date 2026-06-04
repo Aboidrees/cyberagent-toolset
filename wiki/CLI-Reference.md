@@ -88,6 +88,7 @@ engine that ranks the next best actions; the report correlates findings (CVE ×
 EPSS). Mirrors the MCP `cats_assess_*` tools.
 
 ```bash
+node src/index.js assess start <target> --full        # drive the WHOLE assessment in one command
 node src/index.js assess start <target> [--passive]   # → id + ranked next actions
 node src/index.js assess run <id> --top 5             # run top suggestions; new pivots surface
 node src/index.js assess run <id> --uses smb.probe --on 1.2.3.4   # run a specific executor
