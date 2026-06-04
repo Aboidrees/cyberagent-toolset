@@ -99,6 +99,7 @@ discovered CVE triggers `vuln.epss`. `--full` drives the whole loop in one comma
 ```bash
 node src/index.js assess start example.com --full           # full active assessment → report
 node src/index.js assess start example.com --full --passive # OSINT-only (no packets to the host)
+node src/index.js assess start example.com --full --notify  # full assessment + Slack/webhook on completion
 ```
 
 Step through it manually instead, if you prefer:
@@ -147,6 +148,10 @@ cp .env.example .env
 SHODAN_API_KEY=...        # enables shodan.host  (paid; account.shodan.io)
 NVD_API_KEY=...           # raises vuln.cve_lookup rate limit (free; nvd.nist.gov)
 ABUSEIPDB_API_KEY=...     # ip.intel abuse score  (free tier; abuseipdb.com)
+GREYNOISE_API_KEY=...     # greynoise.ip classification  (free community; greynoise.io)
+VIRUSTOTAL_API_KEY=...    # virustotal.lookup reputation  (free; virustotal.com)
+BINARYEDGE_API_KEY=...    # binaryedge.host scan data  (free tier; binaryedge.io)
+INTELX_API_KEY=...        # intelx.search leak/OSINT corpus  (free key; intelx.io)
 ```
 
 `.env.example` documents where to get each key and whether it is free or paid. You
@@ -214,6 +219,9 @@ node src/index.js watch --list watchlists/example.yaml
 # Recurring scan (new findings fire Slack/webhook if configured)
 node src/index.js schedule --playbook quick-web-recon --target example.com --cron "0 8 * * 1"
 
+# Recurring full assessment — dynamic/pivot-driven, notifies on completion
+node src/index.js schedule --assess example.com --cron "0 6 * * *"
+
 # Export a run to a branded PDF / DOCX / HTML report
 node src/index.js report runs/run.json --format pdf --out report.pdf --company "Acme"
 ```
@@ -253,7 +261,7 @@ and [Architecture](architecture.md).
 | ------- | ------- |
 | `cyberagent -p <playbook.yaml> --target <host>` | Run a playbook (default) |
 | `cyberagent auto --target <host>` | Auto-run every applicable executor |
-| `cyberagent assess start <host> --full` | Full pivot-driven assessment → report |
+| `cyberagent assess start <host> --full [--notify]` | Full pivot-driven assessment → report [+ notify] |
 | `cyberagent assess report <id> --format pdf` | Export an assessment (pdf/docx/html) |
 | `cyberagent assess diff <idA> <idB>` | Compare a target's assessments over time |
 | `cyberagent dashboard` | Local web UI (browse / drive / diff) |
@@ -262,6 +270,7 @@ and [Architecture](architecture.md).
 | `cyberagent diff <a.json> <b.json>` | Diff two runs |
 | `cyberagent watch --list <watchlist.yaml>` | Batch targets × playbooks |
 | `cyberagent schedule --playbook <id> --target <host> --cron "<expr>"` | Recurring scan |
+| `cyberagent schedule --assess <host> --cron "<expr>"` | Recurring full assessment (notifies on completion) |
 | `cyberagent report <run.json> --format pdf\|docx\|html` | Export a run report |
 
 (`node src/index.js …` works identically; `cyberagent` is the installed bin name.)

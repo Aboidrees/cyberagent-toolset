@@ -6,7 +6,7 @@ import { hideBin } from 'yargs/helpers';
 import { runPlaybook } from './runner.js';
 import { diffFiles, formatDiffMarkdown, hasChanges } from './diff.js';
 import { runWatchlist } from './watch.js';
-import { scheduleScan } from './schedule.js';
+import { scheduleScan, scheduleAssessment } from './schedule.js';
 import { generateReportFromFile } from './report.js';
 import { loadCatalog } from './extensions/loader.js';
 import { assemble } from './auto.js';
@@ -15,8 +15,9 @@ import {
   createAssessment, runStep, saveAssessment, loadAssessment, listAssessments, preflightTarget,
 } from './assessment.js';
 import { suggest } from './pivots.js';
-import { synthesize, diffAssessments, assessmentDiffHasChanges, renderAssessmentDiff } from './assessment-report.js';
+import { synthesize, diffAssessments, assessmentDiffHasChanges, renderAssessmentDiff, toRunReport } from './assessment-report.js';
 import { generateReport } from './report.js';
+import { notify } from './utils/notify.js';
 import { startDashboard } from './dashboard.js';
 
 /**
@@ -69,6 +70,17 @@ async function driveAssessment(session, catalog, runStep, suggest, saveAssessmen
     await saveAssessment(session);
   }
   return round;
+}
+
+// Send an assessment through the same notifier the playbook runner uses, so a
+// completed (or scheduled) assessment notifies on the configured severity gate.
+// Never throws — notification failures must not fail the assessment.
+async function notifyAssessment(session) {
+  const { json } = synthesize(session);
+  const report = toRunReport(session, json);
+  const res = await notify({ report }).catch(e => ({ sent: false, reason: e.message }));
+  if (res?.sent) console.log(`Notified: ${JSON.stringify(res.results)}`);
+  return res;
 }
 
 // Wrap an async command handler so any thrown error is reported cleanly and the
@@ -193,24 +205,43 @@ await yargs(hideBin(process.argv))
   // ── schedule ────────────────────────────────────────────────────────────────
   .command(
     'schedule',
-    'Run a playbook against a target on a cron schedule (stays running)',
+    'Run a playbook OR a full assessment against a target on a cron schedule (stays running)',
     y => y
-      .option('playbook', { type: 'string', demandOption: true, describe: 'Playbook id or .yaml path' })
-      .option('target', { type: 'string', demandOption: true, describe: 'Target host/IP' })
+      .option('playbook', { type: 'string', describe: 'Playbook id or .yaml path (playbook mode)' })
+      .option('assess', { type: 'string', describe: 'Target to assess on each tick (assessment mode — dynamic/pivot-driven)' })
+      .option('target', { type: 'string', describe: 'Target host/IP (required in playbook mode)' })
       .option('cron', { type: 'string', demandOption: true, describe: 'Cron expression, e.g. "0 8 * * 1"' })
       .option('out', { type: 'string', default: './runs', describe: 'Output directory for reports' })
       .option('now', { type: 'boolean', default: false, describe: 'Run once immediately, then on schedule' })
+      .option('passive', { type: 'boolean', default: false, describe: 'Passive-only (assessment mode)' })
+      .option('top', { type: 'number', default: 5, describe: 'Suggestions to run per round (assessment mode)' })
+      .option('max-rounds', { type: 'number', default: 12, describe: 'Safety cap on assessment rounds' })
       .option('timeout', { type: 'number', describe: 'Per-step timeout in ms' })
-      .example('$0 schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"', 'Every Monday 08:00'),
+      .example('$0 schedule --playbook quick-web-recon --target fortmind.qa --cron "0 8 * * 1"', 'Playbook every Monday 08:00')
+      .example('$0 schedule --assess fortmind.qa --cron "0 6 * * *"', 'Full assessment every day 06:00'),
     wrap(async argv => {
-      await scheduleScan({
-        playbook: argv.playbook,
-        target: argv.target,
-        cronExpr: argv.cron,
-        outDir: argv.out,
-        stepTimeoutMs: argv.timeout,
-        runImmediately: argv.now,
-      });
+      if (argv.assess) {
+        await scheduleAssessment({
+          target: argv.assess,
+          cronExpr: argv.cron,
+          outDir: argv.out,
+          stepTimeoutMs: argv.timeout,
+          top: argv.top,
+          maxRounds: argv['max-rounds'],
+          posture: argv.passive ? 'passive' : undefined,
+          runImmediately: argv.now,
+        });
+      } else {
+        if (!argv.playbook || !argv.target) throw new Error('schedule needs either --assess <target>, or both --playbook and --target.');
+        await scheduleScan({
+          playbook: argv.playbook,
+          target: argv.target,
+          cronExpr: argv.cron,
+          outDir: argv.out,
+          stepTimeoutMs: argv.timeout,
+          runImmediately: argv.now,
+        });
+      }
       await new Promise(() => {}); // keep the process alive for the scheduler
     })
   )
@@ -307,6 +338,7 @@ await yargs(hideBin(process.argv))
       .option('uses', { type: 'string', describe: 'Run a specific executor (with --on)' })
       .option('on', { type: 'string', describe: 'Target for --uses (defaults to the assessment target)' })
       .option('json', { type: 'boolean', default: false, describe: 'JSON output (report/next)' })
+      .option('notify', { type: 'boolean', default: false, describe: 'Send a notification after a --full run (honours NOTIFY_ON_SEVERITY)' })
       .option('out', { type: 'string', describe: 'Write the report to a file (report)' }),
     wrap(async argv => {
       const posture = argv.passive ? 'passive' : undefined;
@@ -335,6 +367,7 @@ await yargs(hideBin(process.argv))
           const rounds = await driveAssessment(session, catalog, runStep, suggest, saveAssessment, { posture, top: argv.top, maxRounds: argv['max-rounds'] });
           console.log(`\n✅ Full assessment complete (${rounds} rounds, ${session.steps.length} steps, ${session.findings.length} findings).`);
           console.log(`Report: cyberagent assess report ${session.id}`);
+          if (argv.notify) await notifyAssessment(session);
           return;
         }
         const next = suggest(session, catalog, { posture, limit: argv.top });
@@ -359,6 +392,7 @@ await yargs(hideBin(process.argv))
           const rounds = await driveAssessment(session, catalog, runStep, suggest, saveAssessment, { posture, top: argv.top, maxRounds: argv['max-rounds'] });
           console.log(`\n✅ Full assessment complete (${rounds} rounds, ${session.steps.length} steps, ${session.findings.length} findings).`);
           console.log(`Report: cyberagent assess report ${session.id}`);
+          if (argv.notify) await notifyAssessment(session);
           return;
         }
         let toRun;
@@ -385,14 +419,7 @@ await yargs(hideBin(process.argv))
         const { json, markdown } = synthesize(session);
         if (argv.format) {
           // Reuse the run report exporters (PDF/DOCX/HTML) on an assessment.
-          const reportObj = {
-            playbook: { id: 'assessment', title: `Assessment — ${session.target}` },
-            vars: { target: session.target },
-            startedAt: session.createdAt, endedAt: session.updatedAt,
-            outputs: session.steps.map(s => ({ name: s.uses, uses: s.uses, ok: s.ok, error: s.error, data: {} })),
-            findings: (session.findings || []).map(f => ({ severity: f.severity, message: f.message, uses: f.uses, step: f.target })),
-            severityCounts: json.severityCounts,
-          };
+          const reportObj = toRunReport(session, json);
           const out = argv.out || `assessment-${session.id}.${argv.format}`;
           await generateReport(reportObj, { format: argv.format, out, branding: argv.company ? { company: argv.company } : {} });
           console.log(`Report exported to ${out}`);

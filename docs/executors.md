@@ -792,3 +792,7 @@ All `http.*` executors accept auth options to reach content behind a login:
 | `securitytrails.dns_history` | `SECURITYTRAILS_API_KEY` | Historical A-record timeline |
 | `censys.host` | `CENSYS_API_ID` + `CENSYS_API_SECRET` | Host services/software/ASN/location |
 | `github.leaks` | `GITHUB_TOKEN` | Public GitHub code referencing the domain + findings |
+| `greynoise.ip` | `GREYNOISE_API_KEY` | GreyNoise IP classification — internet-noise / malicious / RIOT business service |
+| `virustotal.lookup` | `VIRUSTOTAL_API_KEY` | VirusTotal reputation — malicious-vendor count + community score for an IP/domain |
+| `binaryedge.host` | `BINARYEDGE_API_KEY` | BinaryEdge internet-scan host data — open ports + observed services |
+| `intelx.search` | `INTELX_API_KEY` | Intelligence X — records referencing a domain/selector across leak/OSINT corpora |

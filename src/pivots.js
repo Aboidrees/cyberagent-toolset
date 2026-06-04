@@ -36,12 +36,16 @@ const SEED = {
     ['http.git_leak', 44, '.git exposure'], ['http.secrets', 42, 'exposed secrets'],
     ['http.fuzz_paths', 38, 'path fuzzing'], ['cloud.bucket_finder', 44, 'public buckets'],
     ['nuclei.scan', 64, 'templated vuln scan'],
+    ['intelx.search', 60, 'leak/OSINT corpus search'],
   ],
   ip: [
     ['rdap.lookup', 80, 'IP registration'], ['dns.reverse', 78, 'reverse DNS'],
     ['nmap.scan', 76, 'port scan'], ['network.ping', 50, 'liveness'],
     ['network.traceroute', 44, 'path'], ['shodan.host', 74, 'Shodan host data'],
     ['censys.host', 72, 'Censys host data'], ['ip.intel', 70, 'ASN / abuse intel'],
+    ['greynoise.ip', 68, 'noise / malicious classification'],
+    ['virustotal.lookup', 66, 'multi-vendor reputation'],
+    ['binaryedge.host', 64, 'internet-scan host data'],
     ['nuclei.scan', 60, 'templated vuln scan'],
   ],
 };

@@ -95,6 +95,10 @@ ABUSEIPDB_API_KEY=your_key_here          # ip.intel abuse reputation (optional)
 SHODAN_API_KEY=your_key_here             # shodan.host (no-op without it)
 NVD_API_KEY=your_key_here                # vuln.cve_lookup rate-limit boost (optional)
 HUNTER_API_KEY=your_key_here             # hunter.emails (no-op without it)
+GREYNOISE_API_KEY=your_key_here          # greynoise.ip (no-op without it)
+VIRUSTOTAL_API_KEY=your_key_here         # virustotal.lookup (no-op without it)
+BINARYEDGE_API_KEY=your_key_here         # binaryedge.host (no-op without it)
+INTELX_API_KEY=your_key_here             # intelx.search (no-op without it)
 CHROME_PATH=                             # web.screenshot — override Chrome/Chromium path
 
 # ── Runtime behaviour ──
