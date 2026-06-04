@@ -15,7 +15,8 @@ import {
   createAssessment, runStep, saveAssessment, loadAssessment, listAssessments, preflightTarget,
 } from './assessment.js';
 import { suggest } from './pivots.js';
-import { synthesize } from './assessment-report.js';
+import { synthesize, diffAssessments, assessmentDiffHasChanges, renderAssessmentDiff } from './assessment-report.js';
+import { generateReport } from './report.js';
 import { startDashboard } from './dashboard.js';
 
 /**
@@ -291,11 +292,14 @@ await yargs(hideBin(process.argv))
 
   // ── assess (stateful, agent-style assessment) ───────────────────────────────
   .command(
-    'assess <action> [idOrTarget]',
+    'assess <action> [idOrTarget] [idB]',
     'Stateful recon assessment: start · next · run · report · list',
     y => y
-      .positional('action', { choices: ['start', 'next', 'run', 'report', 'list'], describe: 'Assessment action' })
-      .positional('idOrTarget', { type: 'string', describe: 'Target (start) or assessment id (next/run/report)' })
+      .positional('action', { choices: ['start', 'next', 'run', 'report', 'diff', 'list'], describe: 'Assessment action' })
+      .positional('idOrTarget', { type: 'string', describe: 'Target (start) or assessment id (next/run/report/diff)' })
+      .positional('idB', { type: 'string', describe: 'Second assessment id (diff)' })
+      .option('format', { type: 'string', describe: 'Export report as pdf | docx | html (report)' })
+      .option('company', { type: 'string', describe: 'Branding company name for the exported report' })
       .option('passive', { type: 'boolean', default: false, describe: 'Passive-only: restrict to passive executors' })
       .option('top', { type: 'number', default: 5, describe: 'How many top suggestions to run per round' })
       .option('full', { type: 'boolean', default: false, describe: 'Drive to completion — loop until no pivots remain (start/run)' })
@@ -379,8 +383,38 @@ await yargs(hideBin(process.argv))
 
       if (argv.action === 'report') {
         const { json, markdown } = synthesize(session);
+        if (argv.format) {
+          // Reuse the run report exporters (PDF/DOCX/HTML) on an assessment.
+          const reportObj = {
+            playbook: { id: 'assessment', title: `Assessment — ${session.target}` },
+            vars: { target: session.target },
+            startedAt: session.createdAt, endedAt: session.updatedAt,
+            outputs: session.steps.map(s => ({ name: s.uses, uses: s.uses, ok: s.ok, error: s.error, data: {} })),
+            findings: (session.findings || []).map(f => ({ severity: f.severity, message: f.message, uses: f.uses, step: f.target })),
+            severityCounts: json.severityCounts,
+          };
+          const out = argv.out || `assessment-${session.id}.${argv.format}`;
+          await generateReport(reportObj, { format: argv.format, out, branding: argv.company ? { company: argv.company } : {} });
+          console.log(`Report exported to ${out}`);
+          return;
+        }
         if (argv.out) { await fs.writeFile(argv.out, markdown); console.log(`Report written to ${argv.out}`); return; }
         console.log(argv.json ? JSON.stringify(json, null, 2) : markdown);
+        return;
+      }
+
+      if (argv.action === 'diff') {
+        if (!argv.idB) throw new Error('assess diff needs two ids: cyberagent assess diff <idA> <idB>');
+        const sessionB = await loadAssessment(argv.idB);
+        if (!sessionB) throw new Error(`Assessment "${argv.idB}" not found (try: cyberagent assess list)`);
+        const d = diffAssessments(synthesize(session).json, synthesize(sessionB).json);
+        if (argv.json) { console.log(JSON.stringify(d, null, 2)); }
+        else {
+          const md = renderAssessmentDiff(d);
+          if (argv.out) { await fs.writeFile(argv.out, md); console.log(`Diff written to ${argv.out}`); }
+          else console.log(md);
+        }
+        if (assessmentDiffHasChanges(d)) process.exitCode = 1;  // non-zero on change (monitoring), like `diff`
         return;
       }
     })

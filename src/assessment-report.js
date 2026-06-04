@@ -135,3 +135,59 @@ function render(j) {
   L.push('');
   return L.join('\n');
 }
+
+// ── Assessment diff — compare a target's posture across two assessments ────────
+function entitySet(json) {
+  const s = new Set();
+  for (const [type, vals] of Object.entries(json.entities || {})) for (const v of vals) s.add(`${type}:${v}`);
+  return s;
+}
+function findingSet(json) {
+  return new Set((json.findings || []).map(f => `${f.severity}|${f.uses}|${f.message}`));
+}
+
+/**
+ * Diff two synthesized assessment reports (the .json from `synthesize`). Surfaces
+ * what changed between two runs of the same target over time — new/resolved
+ * findings and new/disappeared entities — the assessment analogue of `diff` for
+ * runs, for monitoring.
+ */
+export function diffAssessments(a, b) {
+  const fa = findingSet(a), fb = findingSet(b);
+  const ea = entitySet(a), eb = entitySet(b);
+  const sub = (x, y) => [...x].filter(v => !y.has(v));
+  return {
+    target: b.target || a.target,
+    from: { id: a.id, when: a.updatedAt },
+    to: { id: b.id, when: b.updatedAt },
+    findings: { added: sub(fb, fa).map(decodeFinding), removed: sub(fa, fb).map(decodeFinding) },
+    entities: { added: sub(eb, ea), removed: sub(ea, eb) },
+    severityDelta: deltaCounts(a.severityCounts || {}, b.severityCounts || {}),
+  };
+}
+function decodeFinding(k) { const [severity, uses, ...rest] = k.split('|'); return { severity, uses, message: rest.join('|') }; }
+function deltaCounts(a, b) {
+  const out = {};
+  for (const s of ['critical', 'high', 'medium', 'low', 'info']) out[s] = (b[s] || 0) - (a[s] || 0);
+  return out;
+}
+
+export function assessmentDiffHasChanges(d) {
+  return d.findings.added.length || d.findings.removed.length || d.entities.added.length || d.entities.removed.length;
+}
+
+export function renderAssessmentDiff(d) {
+  const L = [`# Assessment diff — ${d.target}`, '', `- ${d.from.id} (${d.from.when}) → ${d.to.id} (${d.to.when})`, ''];
+  const sec = (title, items, sign) => {
+    if (!items.length) return;
+    L.push(`## ${title} (${items.length})`, '');
+    for (const i of items) L.push(`- ${sign} ${typeof i === 'string' ? i : `**${i.severity.toUpperCase()}** ${i.message} _(${i.uses})_`}`);
+    L.push('');
+  };
+  sec('New findings', d.findings.added, '➕');
+  sec('Resolved findings', d.findings.removed, '✔');
+  sec('New entities', d.entities.added, '➕');
+  sec('Disappeared entities', d.entities.removed, '➖');
+  if (!assessmentDiffHasChanges(d)) L.push('_No changes._', '');
+  return L.join('\n');
+}
