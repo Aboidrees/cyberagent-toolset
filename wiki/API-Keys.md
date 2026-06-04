@@ -20,6 +20,10 @@ cp .env.example .env
 | `CENSYS_API_ID` + `CENSYS_API_SECRET` | `censys.host` | **Free tier** | search.censys.io |
 | `GITHUB_TOKEN` | `github.leaks` (code search) | **Free** | github.com/settings/tokens |
 | `HUNTER_API_KEY` | `hunter.emails` (domain email harvest) | **Free tier** | hunter.io/api-keys |
+| `GREYNOISE_API_KEY` | `greynoise.ip` (noise/malicious classification) | **Free community** | greynoise.io |
+| `VIRUSTOTAL_API_KEY` | `virustotal.lookup` (IP/domain reputation) | **Free tier** | virustotal.com |
+| `BINARYEDGE_API_KEY` | `binaryedge.host` (internet-scan host data) | **Free tier** | binaryedge.io |
+| `INTELX_API_KEY` | `intelx.search` (leak/OSINT corpus) | **Free key** | intelx.io |
 | `SLACK_WEBHOOK_URL` | Slack run notifications | **Free** | api.slack.com/messaging/webhooks |
 | `WEBHOOK_URL` | generic JSON webhook | **Free** (self-hosted) | your endpoint |
 | `NOTIFY_ON_SEVERITY` | severity gate for notifications (`high,critical` default, or `all`) | — | — |

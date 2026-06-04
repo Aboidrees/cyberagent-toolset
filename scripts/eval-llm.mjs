@@ -141,11 +141,64 @@ async function claudeCodeAgent(target) {
   return created ? { assessmentId: created.id } : { error: 'no assessment was produced by the claude-code run' };
 }
 
+// ── Golden expectations per target ────────────────────────────────────────────
+// What a *good* assessment of a known target should surface. When a target has a
+// golden spec, the judge reserves a "golden" dimension that scores the run
+// against these concrete expectations instead of generic heuristics alone — a
+// much sharper signal than "ran N executors". Add targets you assess regularly.
+const GOLDEN = {
+  'example.com': {
+    minExecutors: 6,
+    executors: ['dns.resolve', 'rdap.lookup', 'whois.lookup', 'tls.inspect', 'http.security_score'],
+    entityTypes: ['ip'],
+    minFindings: 0,
+  },
+  'fortmind.qa': {
+    minExecutors: 8,
+    executors: ['dns.resolve', 'subdomains.passive', 'tls.inspect', 'http.security_score', 'email.security'],
+    entityTypes: ['ip', 'subdomain'],
+    minFindings: 1,
+  },
+};
+
+// Score a report against its golden spec (0–20). Returns points + a human detail.
+function goldenScore(report, spec) {
+  const ran = new Set(report.coverage?.executors || []);
+  const haveTypes = new Set(Object.keys(report.entityCounts || {}));
+  const findings = (report.findings || []).length;
+
+  const execHit = spec.executors.filter(u => ran.has(u)).length;
+  const execPts = spec.executors.length ? Math.round((execHit / spec.executors.length) * 8) : 8;   // up to 8
+  const typeHit = spec.entityTypes.filter(t => haveTypes.has(t)).length;
+  const typePts = spec.entityTypes.length ? Math.round((typeHit / spec.entityTypes.length) * 6) : 6; // up to 6
+  const minExecPts = (report.coverage?.executorsUsed || 0) >= spec.minExecutors ? 3 : 0;            // 3
+  const minFindPts = findings >= spec.minFindings ? 3 : 0;                                           // 3
+
+  const points = execPts + typePts + minExecPts + minFindPts;
+  const detail = `executors ${execHit}/${spec.executors.length}, entity-types ${typeHit}/${spec.entityTypes.length}, ` +
+    `≥${spec.minExecutors} execs ${minExecPts ? '✓' : '✗'}, ≥${spec.minFindings} findings ${minFindPts ? '✓' : '✗'}`;
+  return { points, detail };
+}
+
 // ── Judge: score the resulting assessment (0–100) ─────────────────────────────
-function judge(report) {
+// With a golden spec: coverage 25 + discovery 25 + pivoting 15 + report 15 + golden 20.
+// Without one: the original generic 30 + 30 + 20 + 20.
+function judge(report, target) {
   const breakdown = {};
   const ents = report.entityCounts || {};
   const nonPrimaryEntities = Object.entries(ents).filter(([t]) => t !== 'domain').reduce((s, [, n]) => s + n, 0);
+  const spec = GOLDEN[target];
+
+  if (spec) {
+    breakdown.coverage = Math.min(25, (report.coverage?.executorsUsed || 0) * 2.5);
+    breakdown.discovery = Math.min(25, nonPrimaryEntities * 4);
+    breakdown.pivoting = Math.min(15, Object.keys(ents).length * 4);
+    breakdown.report = (report.coverage?.stepsRun > 0 ? 7 : 0) + (Object.keys(report.entities || {}).length > 1 ? 8 : 0);
+    const g = goldenScore(report, spec);
+    breakdown.golden = g.points;
+    const score = Math.round(Object.values(breakdown).reduce((a, b) => a + b, 0));
+    return { score, breakdown, goldenDetail: g.detail };
+  }
 
   breakdown.coverage = Math.min(30, (report.coverage?.executorsUsed || 0) * 3);              // up to 30
   breakdown.discovery = Math.min(30, nonPrimaryEntities * 5);                                 // up to 30
@@ -182,15 +235,16 @@ if (!outcome || outcome.error || outcome === null) {
 
 if (outcome.skipped) { console.log(`SKIP — target unresolvable (${outcome.skipped}).`); process.exit(0); }
 const report = await tools.report(outcome.assessmentId);
-const { score, breakdown } = judge(report);
-printScore(usedAgent, score, breakdown, report);
+const { score, breakdown, goldenDetail } = judge(report, TARGET);
+printScore(usedAgent, score, breakdown, report, goldenDetail);
 process.exit(score >= 50 ? 0 : 1);
 
-function printScore(agent, score, breakdown, report) {
+function printScore(agent, score, breakdown, report, goldenDetail) {
   console.log(`Agent: ${agent}`);
   console.log(`Coverage:  ${report.coverage.executorsUsed} executors, ${report.coverage.stepsRun} steps`);
   console.log(`Entities:  ${Object.entries(report.entityCounts || {}).map(([t, n]) => `${t}:${n}`).join(' ') || 'none'}`);
   console.log(`Findings:  ${(report.findings || []).length}`);
+  if (goldenDetail) console.log(`Golden:    ${goldenDetail}`);
   console.log('\nScore breakdown:');
   for (const [k, v] of Object.entries(breakdown)) console.log(`  ${k.padEnd(10)} ${v}`);
   console.log(`\n${score >= 50 ? '✅' : '❌'} Total: ${score}/100  (pass ≥ 50)`);

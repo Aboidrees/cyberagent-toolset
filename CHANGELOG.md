@@ -4,6 +4,44 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.22.0] - 2026-06-04
+
+Phase 19 — scheduled assessments + intelligence-provider expansion + a sharper
+LLM-eval judge. Grows the catalog to **64 executors across 26 extensions → 86 MCP
+tools** (full mode; lean mode unaffected).
+
+### Added for 0.22.0
+
+- **4 key-gated intelligence providers** (no-op without their key, like every
+  key-gated executor — they never fail a run):
+  - **`greynoise.ip`** (`GREYNOISE_API_KEY`) — classify an IP as benign /
+    malicious / internet-background-noise, plus RIOT known-good-service flagging.
+  - **`virustotal.lookup`** (`VIRUSTOTAL_API_KEY`) — multi-vendor reputation for
+    an IP or domain (malicious-vendor count + community score).
+  - **`binaryedge.host`** (`BINARYEDGE_API_KEY`) — internet-scan host data (open
+    ports + observed services), a Shodan/Censys alternative source.
+  - **`intelx.search`** (`INTELX_API_KEY`) — Intelligence X records referencing a
+    domain/selector across leak/paste/darknet/OSINT corpora (two-step async API).
+  - Wired into the pivot engine: discovered IPs fan out to GreyNoise / VirusTotal
+    / BinaryEdge; the primary domain seeds IntelX.
+- **`assess ... --full --notify`** — route a completed assessment through the same
+  Slack/webhook notifier as runs, gated by `NOTIFY_ON_SEVERITY`.
+- **`schedule --assess <target> --cron "<expr>"`** — cron-scheduled, pivot-driven
+  assessments with full run-parity: each tick drives a fresh assessment to
+  completion, writes JSON + Markdown, and notifies. (`--passive` / `--top` /
+  `--max-rounds`.)
+- **Sharper LLM-in-the-loop eval** — per-target **golden expectations** in
+  `scripts/eval-llm.mjs` add a target-specific scoring dimension (expected
+  executors run, entity types discovered, minimum coverage/findings) on top of the
+  generic heuristics.
+
+### Notes for 0.22.0
+
+- A shared `toRunReport(session)` adapter in `assessment-report.js` is now the
+  single source of truth for mapping an assessment into the run-report shape, used
+  by `assess report` export, scheduled assessments, and notifications.
+- Self-test grows to 64/64; the playbook schema's `uses` enum is regenerated.
+
 ## [0.21.0] - 2026-06-04
 
 Phase 17 — assessment ↔ run parity. Assessments are now first-class peers of

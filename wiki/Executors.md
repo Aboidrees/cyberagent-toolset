@@ -1,6 +1,6 @@
 # Executors
 
-60 executors across 22 domain extensions, addressed by a stable `uses:` key. Run
+64 executors across 26 domain extensions, addressed by a stable `uses:` key. Run
 `cats_capabilities` (MCP) for the live list. Full options + return shapes are in
 the repo's `docs/executors.md`.
 

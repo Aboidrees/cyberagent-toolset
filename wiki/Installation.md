@@ -26,7 +26,7 @@ node src/index.js -p playbooks/all-tools-selftest.yaml --target example.com
 
 # MCP server (Ctrl-C to stop)
 npm run mcp
-# → CyberAgentToolSet (CATS) v0.21.0 ready — 82 tools, 4 prompts, resources on
+# → CyberAgentToolSet (CATS) v0.22.0 ready — 86 tools, 4 prompts, resources on
 ```
 
 ## Optional: API keys

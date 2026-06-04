@@ -75,6 +75,27 @@ export function synthesize(session) {
   return { json, markdown: render(json) };
 }
 
+/**
+ * Adapt an assessment session into the run-report shape that the report
+ * exporters (report.js generateReport) and the notifier (utils/notify.js)
+ * expect. Keeps a single source of truth for the mapping so `assess report`,
+ * scheduled assessments and notifications stay in sync.
+ *
+ * @param session  the assessment
+ * @param json     the synthesize(session).json (pass it to avoid recomputing)
+ */
+export function toRunReport(session, json = synthesize(session).json) {
+  return {
+    playbook: { id: 'assessment', title: `Assessment — ${session.target}` },
+    vars: { target: session.target },
+    startedAt: session.createdAt, endedAt: session.updatedAt,
+    outputs: session.steps.map(s => ({ name: s.uses, uses: s.uses, ok: s.ok, error: s.error, data: {} })),
+    findings: (session.findings || []).map(f => ({ severity: f.severity, message: f.message, uses: f.uses, step: f.target })),
+    severityCounts: json.severityCounts,
+    topSeverity: json.topSeverity,
+  };
+}
+
 function render(j) {
   const L = [];
   L.push(`# Assessment — ${j.target}`);

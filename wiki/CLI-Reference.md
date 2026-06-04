@@ -33,11 +33,16 @@ Batch-runs every target × playbook in a watchlist. See [[Automation]].
 ## schedule
 
 ```bash
-node src/index.js schedule --playbook <id> --target <host> --cron "<expr>" [--now]
+node src/index.js schedule --playbook <id> --target <host> --cron "<expr>" [--now]   # playbook mode
+node src/index.js schedule --assess <target> --cron "<expr>" [--now] [--passive] [--top N]   # assessment mode
 ```
 
-Runs a playbook on a cron schedule (stays running). New findings fire webhooks if
-configured.
+Runs a playbook **or** a full pivot-driven assessment on a cron schedule (stays
+running). Playbook mode reruns the playbook each tick; assessment mode drives a
+fresh assessment to completion, writes a JSON + Markdown report, and routes
+findings through the same notifier — full run-parity for monitoring. New findings
+fire Slack/webhook when `SLACK_WEBHOOK_URL` / `WEBHOOK_URL` (+ `NOTIFY_ON_SEVERITY`)
+are configured.
 
 ## report
 
@@ -89,6 +94,7 @@ EPSS). Mirrors the MCP `cats_assess_*` tools.
 
 ```bash
 node src/index.js assess start <target> --full        # drive the WHOLE assessment in one command
+node src/index.js assess start <target> --full --notify   # + Slack/webhook on completion (NOTIFY_ON_SEVERITY)
 node src/index.js assess start <target> [--passive]   # → id + ranked next actions
 node src/index.js assess run <id> --top 5             # run top suggestions; new pivots surface
 node src/index.js assess run <id> --uses smb.probe --on 1.2.3.4   # run a specific executor

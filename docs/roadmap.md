@@ -4,11 +4,11 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 
 ---
 
-## Current state — v0.21.0
+## Current state — v0.22.0
 
 | Area | Status |
 | ------ | -------- |
-| **60 executors across 22 extensions** (recon · scanning · gaining-access) | ✅ Done |
+| **64 executors across 26 extensions** (recon · scanning · gaining-access) | ✅ Done |
 | **Phase 9 — agent-driven assessments**: stateful sessions + entity graph + pivot engine + correlated report synthesis (`cats_assess_*` + `assess` CLI) | ✅ Done |
 | **Phase 10 — agent-native MCP surface**: MCP Resources + Prompts, lean tool mode + `cats_execute`, assessment eval harness | ✅ Done |
 | **Phase 11 — target diagnostics**: assessment preflight (`reachability`) + report diagnostics — explicit reason for an empty/dead target; eval skips unresolvable targets | ✅ Done |
@@ -22,10 +22,11 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 | **Phase 6 expansion**: `vuln.epss`, `http.graphql`, `dns.txt_fingerprint` | ✅ Done |
 | **Phase 7 expansion**: `rdap.lookup`, `cert.ctlog`, `web.security_txt`, `web.well_known`, `http.favicon_hash`, `dns.zone_transfer`, `smtp.probe`, `ssh.audit` (+ `rdap`/`ssh` extensions) | ✅ Done |
 | **Phase 8 expansion + hardening**: `smb.probe`, `snmp.probe`, `cloud.bucket_objects`, `web.screenshot`, `hunter.emails` (+ `smb`/`snmp`/`hunter` extensions); runtime permission enforcement + `permissions` command; extension-starter template; npm-publish readiness | ✅ Done |
-| MCP server with catalog-driven tool registration (82 tools) + MCP resources & prompts + `cats_capabilities` | ✅ Done |
+| MCP server with catalog-driven tool registration (86 tools) + MCP resources & prompts + `cats_capabilities` | ✅ Done |
 | Input validation + command injection prevention across all executors | ✅ Done |
 | 12 production playbooks + `.env` auto-loading for API keys | ✅ Done |
 | Multi-command CLI (run · diff · watch · schedule · report) + executive-summary reports | ✅ Done |
+| **Phase 19**: 4 key-gated intel providers (`greynoise.ip`, `virustotal.lookup`, `binaryedge.host`, `intelx.search`); scheduled assessments (`schedule --assess`) + `assess --notify`; sharper LLM-eval judge with per-target golden expectations | ✅ Done |
 | Full documentation suite + user guide + GitHub wiki source | ✅ Done |
 
 ---
@@ -33,14 +34,15 @@ This document tracks shipped work and what's planned next. The "next up" backlog
 ## Next up — candidate backlog
 
 **The strategy: lean into the MCP/agent angle.** CATS's defensible value over a
-bare scanner like Nuclei (which it *wraps*, as one of 60 executors) is being the
+bare scanner like Nuclei (which it *wraps*, as one of 64 executors) is being the
 agent-driven orchestration layer — assessments, pivots, the dashboard, both eval
-drivers, and `assess --full`/export/diff are all shipped. Remaining moves:
+drivers, `assess --full`/export/diff, scheduled assessments + notify, and the
+GreyNoise/VirusTotal/BinaryEdge/IntelX intel providers are all shipped. Remaining
+moves:
 
-- **Sharper LLM-in-the-loop judge** — the `eval:llm` framework + both agent drivers (Claude Code + API) ship; add golden expectations per target and more scoring dimensions.
-- **Schedule + notify for assessments** — assessments can export/diff like runs; add cron + webhook/Slack on completion for full parity.
-- **More key-gated intel** — GreyNoise / VirusTotal / BinaryEdge / IntelX, via the no-op-without-key pattern.
 - **Ecosystem** — publish `cyberagent-toolset` + a reference `cyberagent-ext-*` to npm (package is publish-ready: run `npm publish`).
+- **More golden eval targets** — extend the per-target golden expectations map in `scripts/eval-llm.mjs` as new reference targets are assessed.
+- **Further intel providers** — additional key-gated sources via the established no-op-without-key pattern.
 
 > **Explicitly out of scope, by design:** post-exploitation (`maintaining-access`) and anti-forensics (`covering-tracks`).
 
@@ -64,6 +66,10 @@ detailed spec below.
 | ASN / IP intelligence (abuse reputation key-gated) | `ip.intel` | ✅ | — |
 | Shodan host data (key-gated) | `shodan.host` | ✅ | — |
 | Passive DNS history | `securitytrails.*` | ✅ | — |
+| GreyNoise IP classification (key-gated) | `greynoise.ip` | ✅ | 19 |
+| VirusTotal reputation (key-gated) | `virustotal.lookup` | ✅ | 19 |
+| BinaryEdge host data (key-gated) | `binaryedge.host` | ✅ | 19 |
+| Intelligence X corpus search (key-gated) | `intelx.search` | ✅ | 19 |
 
 ### LIVENESS
 
@@ -105,7 +111,7 @@ detailed spec below.
 | Cloud storage bucket finder | `cloud.bucket_finder` | ✅ | — |
 | Nuclei template scan | `nuclei.scan` | ✅ | — |
 
-**Today: 60 executors live** across 22 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
+**Today: 64 executors live** across 26 extensions, plus thousands of checks via `nuclei.scan`. The `task_type` enum stays at four
 (OSINT / PORTSCAN / WEBSCANNER / PASSIVE) — every planned check slots into one of them.
 When a planned executor ships, flip its box to ✅ here and mirror it in CyberAgent's
 `distillation/pipeline/tools.py` `TOOL_CATALOG` + flowchart.

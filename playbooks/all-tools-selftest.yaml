@@ -280,3 +280,19 @@ steps:
     uses: github.leaks
     with:
       timeoutMs: 15000
+  - name: GreyNoise IP classification (key-gated)
+    uses: greynoise.ip
+    with:
+      timeoutMs: 12000
+  - name: VirusTotal reputation (key-gated)
+    uses: virustotal.lookup
+    with:
+      timeoutMs: 15000
+  - name: BinaryEdge host data (key-gated)
+    uses: binaryedge.host
+    with:
+      timeoutMs: 15000
+  - name: Intelligence X corpus search (key-gated)
+    uses: intelx.search
+    with:
+      timeoutMs: 15000
