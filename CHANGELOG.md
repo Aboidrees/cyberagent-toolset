@@ -18,7 +18,7 @@ for dynamic pivot-driven investigation).
   new/resolved findings, new/disappeared entities, severity delta. Exits non-zero
   on change (for monitoring), like `diff` for runs. `--json` / `--out`.
 
-### Notes
+### Notes for 0.21.0
 
 - The pivot engine already chains `tech → vuln.cve_lookup → CVE entities →
   vuln.epss` and keeps the active web/TLS executors in the seed, so a full active
@@ -485,7 +485,7 @@ across 12 production playbooks.
   and `docs/roadmap.md` (Phase 2 items marked complete; 23 checks live).
 - Version bumped 0.4.0 → 0.5.0.
 
-### Notes
+### Notes for 0.5.0
 
 - Phase 2's report-enhancement sub-item (executive summary, risk matrix,
   CVSS-classified Markdown reports) is not yet implemented.
