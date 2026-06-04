@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 project adheres to a 4-part `MAJOR.MINOR.PATCH.MICRO` version in `package.json`.
 
+## [0.22.2] - 2026-06-04
+
+### Fixed for 0.22.2
+
+- **MCP server version banner** — the server version was hardcoded and had
+  drifted (printed `v0.22.0` after the 0.22.1 release). It is now read from
+  `package.json` at startup, so `cyberagent-mcp` always reports the installed
+  version and can never drift again.
+
 ## [0.22.1] - 2026-06-04
 
 Documentation-packaging patch — the first npm release (`0.22.0`) shipped without
